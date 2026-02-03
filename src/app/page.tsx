@@ -1,65 +1,109 @@
-import Image from "next/image";
+import UserSearch from '@/components/UserSearch';
 
-export default function Home() {
+export default function HomePage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <div className="container" style={{ paddingTop: 80, paddingBottom: 80 }}>
+      {/* Hero Section */}
+      <div className="text-center" style={{ marginBottom: 48 }}>
+        <h1 style={{
+          fontSize: '2.75rem',
+          fontWeight: 800,
+          marginBottom: 16,
+          letterSpacing: '-0.02em',
+        }}>
+          Seismic Community Dashboard
+        </h1>
+        <p className="text-muted" style={{ fontSize: '1.125rem', maxWidth: 500, margin: '0 auto' }}>
+          Look up your Discord username to see your contributions and rankings in the Seismic community
+        </p>
+      </div>
+
+      {/* Search Component */}
+      <UserSearch />
+
+      {/* Quick Stats Preview */}
+      <div style={{
+        marginTop: 80,
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+        gap: 20,
+      }}>
+        <a href="/leaderboard" className="card" style={{
+          textDecoration: 'none',
+          cursor: 'pointer',
+          transition: 'all var(--transition-normal)',
+        }}>
+          <h3 style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: 'var(--seismic-primary)'
+            }} />
+            Leaderboard
+          </h3>
+          <p className="text-muted" style={{ fontSize: '0.9375rem' }}>
+            See the top contributors ranked by tweets, art, and overall activity
           </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+        </a>
+
+        <a href="/leaderboard?type=tweet" className="card" style={{
+          textDecoration: 'none',
+          cursor: 'pointer',
+          transition: 'all var(--transition-normal)',
+        }}>
+          <h3 style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: 'var(--seismic-secondary)'
+            }} />
+            Top Tweeters
+          </h3>
+          <p className="text-muted" style={{ fontSize: '0.9375rem' }}>
+            Members who contributed the most in the tweet channel
+          </p>
+        </a>
+
+        <a href="/leaderboard?type=art" className="card" style={{
+          textDecoration: 'none',
+          cursor: 'pointer',
+          transition: 'all var(--transition-normal)',
+        }}>
+          <h3 style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: 'var(--seismic-accent)'
+            }} />
+            Top Artists
+          </h3>
+          <p className="text-muted" style={{ fontSize: '0.9375rem' }}>
+            Members who contributed the most in the art channel
+          </p>
+        </a>
+
+        <a href="/stats" className="card" style={{
+          textDecoration: 'none',
+          cursor: 'pointer',
+          transition: 'all var(--transition-normal)',
+        }}>
+          <h3 style={{ marginBottom: 8, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: 'var(--seismic-gray-400)'
+            }} />
+            Statistics
+          </h3>
+          <p className="text-muted" style={{ fontSize: '0.9375rem' }}>
+            Overview of community metrics and activity patterns
+          </p>
+        </a>
+      </div>
     </div>
   );
 }
