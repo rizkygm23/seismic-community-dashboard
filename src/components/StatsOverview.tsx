@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { CommunityStats, RoleDistribution } from '@/types/database';
 import { getHighestRoleIcon, getRoleIconPath } from '@/lib/roleUtils';
 import EncryptedText from './EncryptedText';
+import TerminalLoader from './TerminalLoader';
 import UserDetailModal from './UserDetailModal';
 
 // Defines extended user info for top contributors
@@ -24,13 +25,39 @@ export default function StatsOverview() {
     const [loading, setLoading] = useState(true);
     const [selectedUser, setSelectedUser] = useState<TopContributor | null>(null);
     const [isEncrypted, setIsEncrypted] = useState(false);
+    const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+    const [timeAgo, setTimeAgo] = useState('just now');
+
+    // Timer to update 'timeAgo' display every minute
+    useEffect(() => {
+        if (!lastUpdated) return;
+
+        const updateTime = () => {
+            const seconds = Math.floor((new Date().getTime() - lastUpdated.getTime()) / 1000);
+            if (seconds < 60) {
+                setTimeAgo('just now');
+            } else {
+                const minutes = Math.floor(seconds / 60);
+                if (minutes < 60) {
+                    setTimeAgo(`${minutes}m ago`);
+                } else {
+                    const hours = Math.floor(minutes / 60);
+                    setTimeAgo(`${hours}h ago`);
+                }
+            }
+        };
+
+        updateTime(); // Initial
+        const interval = setInterval(updateTime, 60000); // Update every minute
+        return () => clearInterval(interval);
+    }, [lastUpdated]);
 
     useEffect(() => {
         async function fetchStats() {
             setLoading(true);
             try {
                 // Fetch all stats in parallel for efficiency
-                const [statsResult, topResult, active7dResult, active30dResult, verifiedCount, leaderCount] = await Promise.all([
+                const [statsResult, topResult, active7dResult, active30dResult, verifiedCount, leaderCount, latestUpdateResult] = await Promise.all([
                     // Main stats using aggregate functions
                     supabase.rpc('get_community_stats'),
 
@@ -59,11 +86,17 @@ export default function StatsOverview() {
                         .eq('is_bot', false)
                         .contains('roles', ['Verified']),
 
-                    // Direct count for Leader role
                     supabase.from('seismic_dc_user')
                         .select('id', { count: 'exact', head: true })
                         .eq('is_bot', false)
                         .contains('roles', ['Leader']),
+
+                    // Latest update timestamp
+                    supabase.from('seismic_dc_user')
+                        .select('updated_at')
+                        .order('updated_at', { ascending: false })
+                        .limit(1)
+                        .single(),
                 ]);
 
                 // Fetch all user roles in batches for Magnitude processing
@@ -208,6 +241,10 @@ export default function StatsOverview() {
                         total: r.total_messages,
                     })));
                 }
+
+                if ((latestUpdateResult as any).data?.updated_at) {
+                    setLastUpdated(new Date((latestUpdateResult as any).data.updated_at));
+                }
             } catch (error) {
                 console.error('Stats fetch error:', error);
             } finally {
@@ -219,11 +256,7 @@ export default function StatsOverview() {
     }, []);
 
     if (loading) {
-        return (
-            <div className="flex justify-center" style={{ padding: 60 }}>
-                <div className="spinner" />
-            </div>
-        );
+        return <TerminalLoader />;
     }
 
     if (!stats) {
@@ -239,7 +272,18 @@ export default function StatsOverview() {
 
     return (
         <div>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                {/* Last Updated Indicator */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    <span className="text-sm font-mono" style={{ color: 'var(--seismic-gray-400)' }}>
+                        Updated {timeAgo}
+                    </span>
+                </div>
+
                 <button
                     onClick={() => setIsEncrypted(!isEncrypted)}
                     className="btn btn-secondary"
