@@ -14,6 +14,7 @@ export default function Navbar() {
         { href: '/stats', label: 'Statistics' },
         { href: '/explore', label: 'Explore' },
         { href: '/compare', label: 'Compare' },
+        { href: '/promotion', label: 'Promotion' },
     ];
 
     return (

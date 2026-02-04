@@ -13,26 +13,68 @@ export default function RoleExplorer() {
     const [loading, setLoading] = useState(true);
     const [membersLoading, setMembersLoading] = useState(false);
     const [selectedUser, setSelectedUser] = useState<LeaderboardUser | null>(null);
+    const [roleCache, setRoleCache] = useState<Record<string, LeaderboardUser[]>>({});
+
+    const fetchMembersForRole = useCallback(async (roleName: string) => {
+        const magnitudePattern = /^Magnitude (\d+\.?\d*)$/;
+        const isMagnitudeRole = magnitudePattern.test(roleName);
+        const selectedMagValue = isMagnitudeRole ? parseFloat(roleName.match(magnitudePattern)![1]) : 0;
+
+        let foundMembers: LeaderboardUser[] = [];
+        let offset = 0;
+        const batchSize = 1000;
+        const hardLimit = 15000;
+
+        while (foundMembers.length < 20) {
+            const { data, error } = await supabase
+                .from('seismic_dc_user')
+                .select('id, username, display_name, avatar_url, roles, tweet, art, total_messages')
+                .eq('is_bot', false)
+                .contains('roles', [roleName])
+                .order('total_messages', { ascending: false })
+                .range(offset, offset + batchSize - 1);
+
+            if (error) throw error;
+            if (!data || data.length === 0) break;
+
+            let validBatch = data || [];
+
+            if (isMagnitudeRole) {
+                validBatch = validBatch.filter((user: any) => {
+                    const userRoles = user.roles || [];
+                    let highestMag = 0;
+                    userRoles.forEach((role: string) => {
+                        const match = role.match(magnitudePattern);
+                        if (match) {
+                            const magValue = parseFloat(match[1]);
+                            if (magValue > highestMag) highestMag = magValue;
+                        }
+                    });
+                    return highestMag === selectedMagValue;
+                });
+            }
+
+            foundMembers = [...foundMembers, ...validBatch];
+
+            if (foundMembers.length >= 20) break;
+            if (data.length < batchSize) break;
+
+            offset += batchSize;
+            if (offset >= hardLimit) break;
+        }
+
+        return foundMembers.slice(0, 20);
+    }, []);
 
     useEffect(() => {
         async function fetchRoles() {
             setLoading(true);
             try {
-                // Get direct counts for Verified/Leader
                 const [verifiedCount, leaderCount] = await Promise.all([
-                    supabase
-                        .from('seismic_dc_user')
-                        .select('id', { count: 'exact', head: true })
-                        .eq('is_bot', false)
-                        .contains('roles', ['Verified']),
-                    supabase
-                        .from('seismic_dc_user')
-                        .select('id', { count: 'exact', head: true })
-                        .eq('is_bot', false)
-                        .contains('roles', ['Leader']),
+                    supabase.from('seismic_dc_user').select('id', { count: 'exact', head: true }).eq('is_bot', false).contains('roles', ['Verified']),
+                    supabase.from('seismic_dc_user').select('id', { count: 'exact', head: true }).eq('is_bot', false).contains('roles', ['Leader']),
                 ]);
 
-                // Fetch all user roles in batches (Supabase default limit is 1000)
                 const allRolesData: { roles: string[] | null }[] = [];
                 const batchSize = 1000;
                 let offset = 0;
@@ -47,7 +89,6 @@ export default function RoleExplorer() {
                         .range(offset, offset + batchSize - 1);
 
                     if (error) throw error;
-
                     if (batch && batch.length > 0) {
                         allRolesData.push(...batch);
                         offset += batchSize;
@@ -57,15 +98,11 @@ export default function RoleExplorer() {
                     }
                 }
 
-                // Process role counts for Magnitude roles only
-                // Only count user at their highest magnitude level
                 const roleMap = new Map<string, number>();
                 const magnitudePattern = /^Magnitude (\d+\.?\d*)$/;
 
                 allRolesData.forEach((row) => {
                     const userRoles = row.roles || [];
-
-                    // Find highest magnitude for this user
                     let highestMagnitude: number | null = null;
                     let highestMagnitudeRole: string | null = null;
 
@@ -80,19 +117,13 @@ export default function RoleExplorer() {
                         }
                     });
 
-                    // Only count highest magnitude role
                     if (highestMagnitudeRole) {
                         roleMap.set(highestMagnitudeRole, (roleMap.get(highestMagnitudeRole) || 0) + 1);
                     }
                 });
 
-                // Add Verified and Leader with accurate counts from database
-                if (verifiedCount.count && verifiedCount.count > 0) {
-                    roleMap.set('Verified', verifiedCount.count);
-                }
-                if (leaderCount.count && leaderCount.count > 0) {
-                    roleMap.set('Leader', leaderCount.count);
-                }
+                if (verifiedCount.count && verifiedCount.count > 0) roleMap.set('Verified', verifiedCount.count);
+                if (leaderCount.count && leaderCount.count > 0) roleMap.set('Leader', leaderCount.count);
 
                 const sortedRoles = Array.from(roleMap.entries())
                     .sort((a, b) => b[1] - a[1])
@@ -109,6 +140,46 @@ export default function RoleExplorer() {
         fetchRoles();
     }, []);
 
+    useEffect(() => {
+        if (roles.length === 0) return;
+
+        let isMounted = true;
+        const prefetch = async () => {
+            const sortedRoles = [...roles].sort((a, b) => {
+                if (a.role_name === 'Verified') return -1;
+                if (b.role_name === 'Verified') return 1;
+                return b.user_count - a.user_count;
+            });
+
+            for (const role of sortedRoles) {
+                if (!isMounted) break;
+
+                let isCached = false;
+                setRoleCache(prev => {
+                    if (prev[role.role_name]) isCached = true;
+                    return prev;
+                });
+                if (isCached) continue;
+
+                try {
+                    await new Promise(r => setTimeout(r, 600));
+                    if (!isMounted) break;
+
+                    const members = await fetchMembersForRole(role.role_name);
+
+                    if (!isMounted) break;
+                    setRoleCache(prev => {
+                        if (prev[role.role_name]) return prev;
+                        return { ...prev, [role.role_name]: members };
+                    });
+                } catch (e) { }
+            }
+        };
+
+        prefetch();
+        return () => { isMounted = false; };
+    }, [roles, fetchMembersForRole]);
+
     const handleRoleSelect = useCallback(async (roleName: string) => {
         if (selectedRole === roleName) {
             setSelectedRole(null);
@@ -117,63 +188,24 @@ export default function RoleExplorer() {
         }
 
         setSelectedRole(roleName);
+
+        if (roleCache[roleName]) {
+            setRoleMembers(roleCache[roleName]);
+            return;
+        }
+
         setMembersLoading(true);
-
         try {
-            // Query users with specific role using array contains
-            const magnitudePattern = /^Magnitude (\d+\.?\d*)$/;
-            const isMagnitudeRole = magnitudePattern.test(roleName);
-
-            // For magnitude roles, don't limit - we need to filter client-side
-            // For other roles, limit to 20
-            let query = supabase
-                .from('seismic_dc_user')
-                .select('id, username, display_name, avatar_url, roles, tweet, art, total_messages')
-                .eq('is_bot', false)
-                .contains('roles', [roleName])
-                .order('total_messages', { ascending: false });
-
-            if (!isMagnitudeRole) {
-                query = query.limit(20);
-            }
-
-            const { data, error } = await query;
-
-            if (error) throw error;
-
-            let filteredData = data || [];
-
-            // For Magnitude roles, filter to only show users where this is their highest magnitude
-            if (isMagnitudeRole) {
-                const selectedMagValue = parseFloat(roleName.match(magnitudePattern)![1]);
-
-                filteredData = filteredData.filter((user: { roles: string[] | null }) => {
-                    const userRoles = user.roles || [];
-                    let highestMag = 0;
-
-                    userRoles.forEach((role: string) => {
-                        const match = role.match(magnitudePattern);
-                        if (match) {
-                            const magValue = parseFloat(match[1]);
-                            if (magValue > highestMag) {
-                                highestMag = magValue;
-                            }
-                        }
-                    });
-
-                    // Only include if selected magnitude is their highest
-                    return highestMag === selectedMagValue;
-                }).slice(0, 20); // Limit to 20 after filtering
-            }
-
-            setRoleMembers(filteredData);
+            const members = await fetchMembersForRole(roleName);
+            setRoleMembers(members);
+            setRoleCache(prev => ({ ...prev, [roleName]: members }));
         } catch (error) {
             console.error('Role members fetch error:', error);
             setRoleMembers([]);
         } finally {
             setMembersLoading(false);
         }
-    }, [selectedRole]);
+    }, [selectedRole, roleCache, fetchMembersForRole]);
 
     if (loading) {
         return (
@@ -185,7 +217,6 @@ export default function RoleExplorer() {
 
     return (
         <div>
-            {/* Role Tags */}
             <div style={{
                 display: 'flex',
                 flexWrap: 'wrap',
@@ -230,7 +261,6 @@ export default function RoleExplorer() {
                 })}
             </div>
 
-            {/* Selected Role Members */}
             {selectedRole && (
                 <div className="card fade-in" style={{ marginTop: 16 }}>
                     <div className="card-header">
@@ -318,7 +348,6 @@ export default function RoleExplorer() {
                 </div>
             )}
 
-            {/* User Detail Modal */}
             {selectedUser && (
                 <UserDetailModal
                     user={selectedUser}

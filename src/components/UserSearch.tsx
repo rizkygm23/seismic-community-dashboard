@@ -167,7 +167,7 @@ export default function UserSearch() {
             {/* Selected User Profile */}
             {selectedUser && (
                 <div className="fade-in">
-                    <UserCard user={selectedUser} />
+                    <UserCard user={selectedUser} showDownload={false} />
                 </div>
             )}
         </div>

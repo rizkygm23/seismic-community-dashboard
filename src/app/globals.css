@@ -21,6 +21,7 @@
 
   /* Accent Colors */
   --seismic-primary: #D4BB6E;
+  --seismic-primary-rgb: 212, 187, 110;
   /* Bright Gold */
   --seismic-primary-light: #E3CE8C;
   --seismic-primary-dark: #A6924D;
@@ -28,6 +29,7 @@
   --seismic-secondary: #C98A94;
   /* Bright Mauve */
   --seismic-accent: #B58E99;
+  --seismic-accent-rgb: 181, 142, 153;
   /* Bright Plum */
   --seismic-danger: #ef4444;
 
