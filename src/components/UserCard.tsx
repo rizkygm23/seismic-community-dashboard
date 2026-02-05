@@ -4,6 +4,8 @@ import { SeismicUser } from '@/types/database';
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getRoleIconPath, getHighestRoleIcon } from '@/lib/roleUtils';
+// @ts-ignore - Importing JS component
+import ElectricBorder from './ElectricBorder';
 import html2canvas from 'html2canvas';
 
 interface UserCardProps {
@@ -16,6 +18,7 @@ interface RankInfo {
     totalRank: number;
     tweetRank: number;
     artRank: number;
+    roleRank: number | null;
     totalUsers: number;
 }
 
@@ -25,21 +28,69 @@ export default function UserCard({ user, showDownload = true, compact = false }:
     const [downloading, setDownloading] = useState(false);
     const cardRef = useRef<HTMLDivElement>(null);
 
+    const getCurrentMagnitude = () => {
+        const roles = user.roles || [];
+        let highestMag = 0;
+        const magnitudePattern = /^Magnitude (\d+\.?\d*)$/;
+
+        roles.forEach(role => {
+            const match = role.match(magnitudePattern);
+            if (match) {
+                const magValue = parseFloat(match[1]);
+                if (magValue > highestMag) {
+                    highestMag = magValue;
+                }
+            }
+        });
+
+        return highestMag;
+    };
+
     useEffect(() => {
         async function fetchRanks() {
             setLoading(true);
             try {
-                const [totalRankResult, tweetRankResult, artRankResult, totalUsersResult] = await Promise.all([
+                const currentMag = getCurrentMagnitude();
+                const roleString = `Magnitude ${currentMag}.0`;
+
+                const queries = [
                     supabase.from('seismic_dc_user').select('id', { count: 'exact', head: true }).eq('is_bot', false).gt('total_messages', user.total_messages),
                     supabase.from('seismic_dc_user').select('id', { count: 'exact', head: true }).eq('is_bot', false).gt('tweet', user.tweet),
                     supabase.from('seismic_dc_user').select('id', { count: 'exact', head: true }).eq('is_bot', false).gt('art', user.art),
                     supabase.from('seismic_dc_user').select('id', { count: 'exact', head: true }).eq('is_bot', false),
-                ]);
+                ];
+
+                if (currentMag > 0) {
+                    let roleQuery = supabase.from('seismic_dc_user')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('is_bot', false)
+                        .contains('roles', [roleString])
+                        .gt('total_messages', user.total_messages);
+
+                    // Isolate rank to users where this is their HIGHEST role
+                    // by excluding anyone who has the next magnitude
+                    if (currentMag < 10) {
+                        const nextMagString = `Magnitude ${currentMag + 1}.0`;
+                        // Using strict string format for Postgres array comparison
+                        roleQuery = roleQuery.not('roles', 'cs', `{"${nextMagString}"}`);
+                    }
+
+                    queries.push(roleQuery);
+                }
+
+                const results = await Promise.all(queries);
+
+                const totalRankResult = results[0];
+                const tweetRankResult = results[1];
+                const artRankResult = results[2];
+                const totalUsersResult = results[3];
+                const roleRankResult = currentMag > 0 ? results[4] : null;
 
                 setRankInfo({
                     totalRank: (totalRankResult.count || 0) + 1,
                     tweetRank: (tweetRankResult.count || 0) + 1,
                     artRank: (artRankResult.count || 0) + 1,
+                    roleRank: roleRankResult ? (roleRankResult.count || 0) + 1 : null,
                     totalUsers: totalUsersResult.count || 1,
                 });
             } catch (error) {
@@ -104,23 +155,7 @@ export default function UserCard({ user, showDownload = true, compact = false }:
     const activityDays = getActivityDays();
     const messagesPerDay = activityDays ? (user.total_messages / activityDays).toFixed(1) : 'N/A';
 
-    const getCurrentMagnitude = () => {
-        const roles = user.roles || [];
-        let highestMag = 0;
-        const magnitudePattern = /^Magnitude (\d+\.?\d*)$/;
 
-        roles.forEach(role => {
-            const match = role.match(magnitudePattern);
-            if (match) {
-                const magValue = parseFloat(match[1]);
-                if (magValue > highestMag) {
-                    highestMag = magValue;
-                }
-            }
-        });
-
-        return highestMag;
-    };
 
     const getNextMagnitudeInfo = () => {
         const currentMag = getCurrentMagnitude();
@@ -215,6 +250,7 @@ export default function UserCard({ user, showDownload = true, compact = false }:
             )}
 
             {/* Card Content - Fixed Layout for Capture */}
+
             <div
                 ref={cardRef}
                 id="card-capture-target"
@@ -222,20 +258,32 @@ export default function UserCard({ user, showDownload = true, compact = false }:
                 style={{
                     padding: compact ? 16 : 24,
                     backgroundColor: '#0e0e0e', // Explicit dark bg for PNG
-                    minWidth: compact ? 'auto' : '500px', // Remove min-width constraint in compact mode
-                    width: compact ? 'fit-content' : '100%', // Use w-fit as requested
-                    fontFamily: 'sans-serif' // Fallback font
+                    minWidth: compact ? 'auto' : '500px', // Restore min-width
+                    width: compact ? 'fit-content' : '100%', // Restore width logic
+                    fontFamily: 'sans-serif', // Fallback font
+                    // Border is back by default from class "card"
                 }}
             >
                 {/* User Header */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 24 }}>
-                    <div className="avatar avatar-xl">
-                        {user.avatar_url ? (
-                            <img src={user.avatar_url} alt={user.username} crossOrigin="anonymous" />
-                        ) : (
-                            user.username[0].toUpperCase()
-                        )}
-                    </div>
+                    <ElectricBorder
+                        color="#A6924D"
+                        speed={3}
+                        chaos={0.06}
+                        thickness={2}
+                        borderRadius={48} // Circular
+                        style={{ width: 'fit-content', height: 'fit-content' }}
+                        className=""
+                    >
+                        <div className="avatar avatar-xl" style={{ border: 'none' }}>
+                            {user.avatar_url ? (
+                                <img src={user.avatar_url} alt={user.username} crossOrigin="anonymous" style={{ borderRadius: '50%' }} />
+                            ) : (
+                                user.username[0].toUpperCase()
+                            )}
+                        </div>
+                    </ElectricBorder>
+
                     <div style={{ flex: 1 }}>
                         <h2 style={{ fontSize: '1.5rem', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 10 }}>
                             {user.display_name || user.username}
@@ -355,19 +403,34 @@ export default function UserCard({ user, showDownload = true, compact = false }:
                         borderRadius: 'var(--border-radius)',
                         border: '1px dashed var(--seismic-primary)'
                     }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                            <div>
-                                <div className="text-muted" style={{ fontSize: '0.75rem', marginBottom: 4 }}>Current Level</div>
-                                <h4 style={{ margin: 0, color: 'var(--seismic-primary)' }}>
-                                    Magnitude {nextMagInfo.currentMagnitude}.0
-                                </h4>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, padding: '0 12px' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                <div className="text-muted" style={{ fontSize: '0.75rem', marginBottom: 6 }}>Current Level</div>
+                                {getRoleIconPath(`Magnitude ${nextMagInfo.currentMagnitude}.0`) && (
+                                    <img
+                                        src={getRoleIconPath(`Magnitude ${nextMagInfo.currentMagnitude}.0`)!}
+                                        alt={`Magnitude ${nextMagInfo.currentMagnitude}`}
+                                        style={{ height: 48, width: 'auto', objectFit: 'contain' }}
+                                        crossOrigin="anonymous"
+                                    />
+                                )}
+                                {rankInfo?.roleRank && (
+                                    <div className="badge badge-primary" style={{ marginTop: 8, fontSize: '0.7rem', padding: '2px 8px' }}>
+                                        Rank #{rankInfo.roleRank}
+                                    </div>
+                                )}
                             </div>
-                            <div style={{ fontSize: '1.5rem', color: 'var(--seismic-gray-500)' }}>→</div>
-                            <div style={{ textAlign: 'right' }}>
-                                <div className="text-muted" style={{ fontSize: '0.75rem', marginBottom: 4 }}>Next Goal</div>
-                                <h4 style={{ margin: 0, color: 'var(--seismic-white)' }}>
-                                    Magnitude {nextMagInfo.nextMagnitude}.0
-                                </h4>
+                            <div style={{ fontSize: '1.5rem', color: 'var(--seismic-gray-500)', marginTop: 12 }}>→</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                <div className="text-muted" style={{ fontSize: '0.75rem', marginBottom: 6 }}>Next Goal</div>
+                                {getRoleIconPath(`Magnitude ${nextMagInfo.nextMagnitude}.0`) && (
+                                    <img
+                                        src={getRoleIconPath(`Magnitude ${nextMagInfo.nextMagnitude}.0`)!}
+                                        alt={`Magnitude ${nextMagInfo.nextMagnitude}`}
+                                        style={{ height: 48, width: 'auto', objectFit: 'contain', opacity: 0.6 }}
+                                        crossOrigin="anonymous"
+                                    />
+                                )}
                             </div>
                         </div>
                         <div className="text-muted" style={{ fontSize: '0.8125rem', textAlign: 'center', marginTop: 12 }}>
@@ -426,14 +489,14 @@ export default function UserCard({ user, showDownload = true, compact = false }:
                                         <div
                                             style={{
                                                 width: `${(user.tweet / user.total_messages) * 100}%`,
-                                                background: 'var(--seismic-secondary)',
+                                                background: '#60a5fa', // Blue for Tweets
                                             }}
                                             title={`Tweets: ${((user.tweet / user.total_messages) * 100).toFixed(1)}%`}
                                         />
                                         <div
                                             style={{
                                                 width: `${(user.art / user.total_messages) * 100}%`,
-                                                background: 'var(--seismic-accent)',
+                                                background: '#f472b6', // Pink for Art
                                             }}
                                             title={`Art: ${((user.art / user.total_messages) * 100).toFixed(1)}%`}
                                         />
@@ -442,13 +505,13 @@ export default function UserCard({ user, showDownload = true, compact = false }:
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'center', gap: 24, marginTop: 8 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--seismic-secondary)' }} />
+                                    <span style={{ width: 8, height: 8, borderRadius: 2, background: '#60a5fa' }} />
                                     <span className="text-muted" style={{ fontSize: '0.75rem' }}>
                                         Tweet ({user.total_messages > 0 ? ((user.tweet / user.total_messages) * 100).toFixed(0) : 0}%)
                                     </span>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--seismic-accent)' }} />
+                                    <span style={{ width: 8, height: 8, borderRadius: 2, background: '#f472b6' }} />
                                     <span className="text-muted" style={{ fontSize: '0.75rem' }}>
                                         Art ({user.total_messages > 0 ? ((user.art / user.total_messages) * 100).toFixed(0) : 0}%)
                                     </span>
