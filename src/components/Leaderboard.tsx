@@ -191,17 +191,14 @@ export default function Leaderboard({ initialType = 'combined' }: LeaderboardPro
                                         onClick={() => setSelectedUser(user)}
                                         style={{
                                             cursor: 'pointer',
-                                            animation: `slideInUp 0.3s ease-out ${index * 0.03}s both`,
-                                            transition: 'all var(--transition-normal)',
+                                            transition: 'background-color var(--transition-fast)',
                                         }}
                                         className="hover-row"
                                         onMouseEnter={(e) => {
                                             (e.currentTarget as HTMLTableRowElement).style.backgroundColor = 'rgba(212, 187, 110, 0.05)';
-                                            (e.currentTarget as HTMLTableRowElement).style.transform = 'scale(1.01)';
                                         }}
                                         onMouseLeave={(e) => {
                                             (e.currentTarget as HTMLTableRowElement).style.backgroundColor = 'transparent';
-                                            (e.currentTarget as HTMLTableRowElement).style.transform = 'scale(1)';
                                         }}
                                     >
                                         <td>
@@ -209,11 +206,6 @@ export default function Leaderboard({ initialType = 'combined' }: LeaderboardPro
                                                 fontSize: '0.875rem',
                                                 fontWeight: 700,
                                             }}>
-                                                {user.rank! <= 3 ? (
-                                                    <span style={{ fontSize: '1.2rem', marginRight: 2 }}>
-                                                        {user.rank === 1 ? '🥇' : user.rank === 2 ? '🥈' : '🥉'}
-                                                    </span>
-                                                ) : null}
                                                 #{user.rank}
                                             </div>
                                         </td>
@@ -312,7 +304,7 @@ export default function Leaderboard({ initialType = 'combined' }: LeaderboardPro
                         </button>
                     ) : (
                         <p className="text-center text-muted" style={{ fontSize: '0.875rem' }}>
-                            ✨ End of leaderboard
+                            End of leaderboard
                         </p>
                     )}
                 </div>
@@ -327,17 +319,6 @@ export default function Leaderboard({ initialType = 'combined' }: LeaderboardPro
             )}
 
             <style jsx>{`
-                @keyframes slideInUp {
-                    from {
-                        opacity: 0;
-                        transform: translateY(10px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
-                }
-
                 @keyframes spin {
                     to {
                         transform: rotate(360deg);

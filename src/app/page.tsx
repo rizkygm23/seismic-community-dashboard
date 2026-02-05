@@ -16,42 +16,36 @@ export default function HomePage() {
       label: 'Leaderboard',
       description: 'See the top contributors ranked by tweets, art, and overall activity',
       color: 'var(--seismic-primary)',
-      icon: '🏆',
     },
     {
       href: '/leaderboard?type=tweet',
       label: 'Top Tweeters',
       description: 'Members who contributed the most in the tweet channel',
       color: 'var(--seismic-secondary)',
-      icon: '💬',
     },
     {
       href: '/leaderboard?type=art',
       label: 'Top Artists',
       description: 'Members who contributed the most in the art channel',
       color: 'var(--seismic-accent)',
-      icon: '🎨',
     },
     {
       href: '/stats',
       label: 'Statistics',
       description: 'Overview of community metrics and activity patterns',
       color: 'var(--seismic-gray-400)',
-      icon: '📊',
     },
     {
       href: '/explore',
       label: 'Explore',
       description: 'Browse members by role and discover the community',
       color: '#9333ea',
-      icon: '🔍',
     },
     {
       href: '/compare',
       label: 'Compare',
       description: 'Compare two members side by side',
       color: '#06b6d4',
-      icon: '⚖️',
     },
   ];
 
@@ -119,14 +113,10 @@ export default function HomePage() {
                 borderWidth: '2px',
               }}
               onMouseEnter={(e) => {
-                (e.currentTarget as HTMLElement).style.transform = 'translateY(-8px)';
                 (e.currentTarget as HTMLElement).style.borderColor = link.color;
-                (e.currentTarget as HTMLElement).style.boxShadow = `0 20px 40px ${link.color}20`;
               }}
               onMouseLeave={(e) => {
-                (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
                 (e.currentTarget as HTMLElement).style.borderColor = 'var(--seismic-gray-800)';
-                (e.currentTarget as HTMLElement).style.boxShadow = 'none';
               }}
             >
               {/* Corner accent */}
@@ -141,15 +131,6 @@ export default function HomePage() {
               }} />
 
               <div style={{ position: 'relative', zIndex: 1 }}>
-                <div style={{
-                  fontSize: '2.5rem',
-                  marginBottom: 12,
-                  display: 'inline-block',
-                  transition: 'transform var(--transition-normal)',
-                }}>
-                  {link.icon}
-                </div>
-
                 <h3 style={{
                   marginBottom: 8,
                   fontSize: '1.125rem',
