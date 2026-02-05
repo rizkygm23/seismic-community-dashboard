@@ -380,6 +380,29 @@ export default function StatsOverview() {
                                     <div className={`rank-badge ${index === 0 ? 'rank-1' : index === 1 ? 'rank-2' : index === 2 ? 'rank-3' : 'rank-default'}`}>
                                         {index + 1}
                                     </div>
+                                    <div style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', flexShrink: 0 }}>
+                                        {user.avatar_url ? (
+                                            <img
+                                                src={user.avatar_url}
+                                                alt={user.username}
+                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                            />
+                                        ) : (
+                                            <div style={{
+                                                width: '100%',
+                                                height: '100%',
+                                                background: 'var(--seismic-gray-700)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                fontSize: '0.75rem',
+                                                fontWeight: 600,
+                                                color: 'var(--seismic-white)'
+                                            }}>
+                                                {user.username[0].toUpperCase()}
+                                            </div>
+                                        )}
+                                    </div>
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                         <div className="font-medium truncate" style={{ color: 'var(--seismic-white)', display: 'flex', alignItems: 'center', gap: 6 }}>
                                             <EncryptedText text={user.display_name || user.username} enabled={isEncrypted} />

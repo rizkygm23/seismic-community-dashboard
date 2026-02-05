@@ -5,6 +5,21 @@ import { supabase } from '@/lib/supabase';
 import { SeismicUser } from '@/types/database';
 import TerminalLoader from '@/components/TerminalLoader';
 
+import { getHighestMagnitudeRole } from '@/lib/roleUtils';
+import ElectricBorder from '@/components/ElectricBorder';
+
+const MAGNITUDE_COLORS: Record<number, string> = {
+    1: '#78716c', // Stone 500
+    2: '#a8a29e', // Stone 400
+    3: '#fef3c7', // Amber 100
+    4: '#22c55e', // Green 500
+    5: '#3b82f6', // Blue 500
+    6: '#8b5cf6', // Violet 500
+    7: '#ec4899', // Pink 500
+    8: '#ef4444', // Red 500
+    9: '#eab308', // Yellow 500 (Gold)
+};
+
 export default function PromotionPage() {
     const [promotedUsers, setPromotedUsers] = useState<SeismicUser[]>([]);
     const [loading, setLoading] = useState(true);
@@ -31,7 +46,7 @@ export default function PromotionPage() {
         fetchPromotions();
     }, []);
 
-    const copyTweet = (magnitude: number, users: SeismicUser[]) => {
+    const shareOnTwitter = (magnitude: number, users: SeismicUser[]) => {
         const xTags = users
             .filter(u => u.x_username)
             .map(u => `@${u.x_username}`)
@@ -42,12 +57,10 @@ export default function PromotionPage() {
             return;
         }
 
-        const tweet = `Congratulations to our new Magnitude ${magnitude} members! 🎉\n\n${xTags}\n\nKeep pushing the boundaries! 🚀 #SeismicCommunity`;
+        const text = `Congratulations on your promotion to Magnitude ${magnitude}! 🥂\n\n${xTags}\n\nWell deserved! 🚀 #SeismicCommunity`;
+        const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
 
-        navigator.clipboard.writeText(tweet).then(() => {
-            setCopiedGroup(magnitude);
-            setTimeout(() => setCopiedGroup(null), 2000);
-        });
+        window.open(url, '_blank', 'noopener,noreferrer');
     };
 
     if (loading) {
@@ -57,8 +70,21 @@ export default function PromotionPage() {
     // Group users by integer part of role_jumat (Magnitude)
     const groupedUsers: Record<number, SeismicUser[]> = {};
     promotedUsers.forEach(user => {
-        if (user.role_jumat) {
-            const mag = Math.floor(user.role_jumat);
+        let magValue = user.role_jumat;
+
+        // Fallback: Calculate from roles if role_jumat is missing
+        if (!magValue && user.roles) {
+            const highestRole = getHighestMagnitudeRole(user.roles);
+            if (highestRole) {
+                const match = highestRole.match(/Magnitude (\d+(\.\d+)?)/);
+                if (match) {
+                    magValue = parseFloat(match[1]);
+                }
+            }
+        }
+
+        if (magValue) {
+            const mag = Math.floor(magValue);
             if (mag >= 2 && mag <= 9) {
                 if (!groupedUsers[mag]) {
                     groupedUsers[mag] = [];
@@ -143,6 +169,11 @@ export default function PromotionPage() {
                                     alignItems: 'center',
                                     gap: 12
                                 }}>
+                                    <img
+                                        src={`/icon_role/mag${mag}.webp`}
+                                        alt={`Magnitude ${mag}`}
+                                        style={{ height: 48, width: 'auto', objectFit: 'contain' }}
+                                    />
                                     Magnitude {mag}
                                     <span style={{
                                         fontSize: '1rem',
@@ -156,7 +187,7 @@ export default function PromotionPage() {
                                 </h2>
                                 <button
                                     className="btn btn-secondary"
-                                    onClick={() => copyTweet(mag, groupedUsers[mag])}
+                                    onClick={() => shareOnTwitter(mag, groupedUsers[mag])}
                                     style={{
                                         display: 'flex',
                                         alignItems: 'center',
@@ -164,16 +195,8 @@ export default function PromotionPage() {
                                         fontSize: '0.9rem'
                                     }}
                                 >
-                                    {copiedGroup === mag ? (
-                                        <>
-                                            <span>✓ Copied!</span>
-                                        </>
-                                    ) : (
-                                        <>
-                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 3a10.9 10.9 0 0 1-3.14 1.53 4.48 4.48 0 0 0-7.86 3v1A10.66 10.66 0 0 1 3 4s-4 9 5 13a11.64 11.64 0 0 1-7 2c9 5 20 0 20-11.5a4.5 4.5 0 0 0-.08-.83A7.72 7.72 0 0 0 23 3z"></path></svg>
-                                            Copy Tweet
-                                        </>
-                                    )}
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
+                                    Share on X
                                 </button>
                             </div>
 
@@ -183,28 +206,25 @@ export default function PromotionPage() {
                                 gap: 24
                             }}>
                                 {groupedUsers[mag].map((user, index) => (
-                                    <div
+                                    <ElectricBorder
                                         key={user.id}
-                                        className="card"
+                                        color={MAGNITUDE_COLORS[mag] || '#D4BB6E'}
+                                        className="card !border-0"
+                                        borderRadius={16}
                                         style={{
                                             padding: 0,
                                             overflow: 'hidden',
                                             animation: `fadeIn 0.5s ease-out forwards ${index * 0.1}s`,
                                             opacity: 0,
                                             transform: 'translateY(20px)',
-                                            border: '1px solid var(--seismic-gray-800)'
                                         }}
                                     >
                                         {/* Banner/Header of Card */}
                                         <div style={{
                                             background: 'linear-gradient(135deg, rgba(var(--seismic-primary-rgb), 0.08) 0%, rgba(var(--seismic-accent-rgb), 0.08) 100%)',
                                             padding: '32px 24px 24px 24px',
-                                            borderBottom: '1px solid var(--seismic-gray-800)',
                                             position: 'relative'
                                         }}>
-                                            {/* Confetti/Sparkle decoration */}
-                                            <div style={{ position: 'absolute', top: 12, right: 12, fontSize: '1.2rem' }}>🎉</div>
-
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
                                                 <div className="avatar avatar-xl" style={{ border: '3px solid var(--seismic-dark)' }}>
                                                     {user.avatar_url ? (
@@ -240,56 +260,7 @@ export default function PromotionPage() {
                                                 </div>
                                             </div>
                                         </div>
-
-                                        {/* Promotion Details */}
-                                        <div style={{ padding: 24 }}>
-                                            <div style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                marginBottom: 24,
-                                                padding: '16px',
-                                                background: 'var(--seismic-gray-900)',
-                                                borderRadius: 'var(--border-radius)',
-                                                border: '1px solid var(--seismic-gray-800)'
-                                            }}>
-                                                <div style={{ textAlign: 'center' }}>
-                                                    <div className="text-muted" style={{ fontSize: '0.75rem', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Previous</div>
-                                                    <div style={{ fontSize: '1.25rem', fontWeight: 600, color: 'var(--seismic-gray-400)' }}>
-                                                        Mag {user.role_kamis !== null ? Number(user.role_kamis).toFixed(1) : '?'}
-                                                    </div>
-                                                </div>
-
-                                                <div style={{
-                                                    color: 'var(--seismic-primary)',
-                                                    fontSize: '1.25rem',
-                                                    opacity: 0.8
-                                                }}>
-                                                    ➔
-                                                </div>
-
-                                                <div style={{ textAlign: 'center' }}>
-                                                    <div className="text-muted" style={{ fontSize: '0.75rem', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Current</div>
-                                                    <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--seismic-white)' }}>
-                                                        Mag {user.role_jumat !== null ? Number(user.role_jumat).toFixed(1) : '?'}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div style={{
-                                                textAlign: 'center',
-                                                padding: '12px',
-                                                background: 'rgba(var(--seismic-primary-rgb), 0.1)',
-                                                color: 'var(--seismic-primary)',
-                                                borderRadius: 'var(--border-radius)',
-                                                fontSize: '0.95rem',
-                                                fontWeight: 600,
-                                                letterSpacing: '0.01em'
-                                            }}>
-                                                Promoted this week! 🚀
-                                            </div>
-                                        </div>
-                                    </div>
+                                    </ElectricBorder>
                                 ))}
                             </div>
                         </div>
