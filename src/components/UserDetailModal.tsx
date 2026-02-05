@@ -82,31 +82,44 @@ export default function UserDetailModal({ user: initialUser, onClose }: UserDeta
             zIndex: 9999,
             padding: 20
         }}>
-            <div ref={modalRef} style={{ width: '100%', maxWidth: 480, position: 'relative' }}>
-                <button
-                    onClick={onClose}
-                    style={{
-                        position: 'absolute',
-                        top: -40,
-                        right: 0,
-                        background: 'none',
-                        border: 'none',
-                        color: 'white',
-                        fontSize: 24,
-                        cursor: 'pointer',
-                        padding: 8
-                    }}
-                >
-                    ✕
-                </button>
-                <div className="card-animate-enter">
+            <div ref={modalRef} style={{
+                width: 'fit-content',
+                maxWidth: '95vw',
+                position: 'relative',
+                maxHeight: '90vh',
+                display: 'flex',
+                flexDirection: 'column'
+            }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8, paddingRight: 8 }}>
+                    <button
+                        onClick={onClose}
+                        style={{
+                            background: 'rgba(0, 0, 0, 0.5)',
+                            border: '1px solid var(--seismic-gray-700)',
+                            borderRadius: '50%',
+                            width: 32,
+                            height: 32,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'var(--seismic-white)',
+                            fontSize: 16,
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                        }}
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                <div className="card-animate-enter" style={{ overflowY: 'auto', borderRadius: 'var(--border-radius-lg)', paddingRight: 4 }}>
                     {loading ? (
                         <div className="card" style={{ padding: 40, textAlign: 'center' }}>
                             <div className="spinner" />
                             <p style={{ marginTop: 16, color: 'var(--seismic-gray-400)' }}>Loading user profile...</p>
                         </div>
                     ) : fullUser ? (
-                        <UserCard user={fullUser} />
+                        <UserCard user={fullUser} compact={true} />
                     ) : (
                         <div className="card" style={{ padding: 20, textAlign: 'center' }}>
                             <p>User not found</p>

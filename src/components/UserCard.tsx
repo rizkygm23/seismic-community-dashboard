@@ -9,6 +9,7 @@ import html2canvas from 'html2canvas';
 interface UserCardProps {
     user: SeismicUser;
     showDownload?: boolean;
+    compact?: boolean;
 }
 
 interface RankInfo {
@@ -18,7 +19,7 @@ interface RankInfo {
     totalUsers: number;
 }
 
-export default function UserCard({ user, showDownload = true }: UserCardProps) {
+export default function UserCard({ user, showDownload = true, compact = false }: UserCardProps) {
     const [rankInfo, setRankInfo] = useState<RankInfo | null>(null);
     const [loading, setLoading] = useState(true);
     const [downloading, setDownloading] = useState(false);
@@ -135,7 +136,7 @@ export default function UserCard({ user, showDownload = true }: UserCardProps) {
     const getPercentile = () => {
         if (!rankInfo) return null;
         const percentile = ((rankInfo.totalUsers - rankInfo.totalRank) / rankInfo.totalUsers) * 100;
-        return Math.max(0, Math.min(100, percentile)).toFixed(1);
+        return Math.max(0, Math.min(100, percentile)).toFixed(2);
     };
 
     const getAchievements = () => {
@@ -219,10 +220,10 @@ export default function UserCard({ user, showDownload = true }: UserCardProps) {
                 id="card-capture-target"
                 className="card"
                 style={{
-                    padding: 24,
+                    padding: compact ? 16 : 24,
                     backgroundColor: '#0e0e0e', // Explicit dark bg for PNG
-                    minWidth: '500px', // Force width to prevent layout squashing
-                    width: '100%',
+                    minWidth: compact ? 'auto' : '500px', // Remove min-width constraint in compact mode
+                    width: compact ? 'fit-content' : '100%', // Use w-fit as requested
                     fontFamily: 'sans-serif' // Fallback font
                 }}
             >
@@ -339,14 +340,14 @@ export default function UserCard({ user, showDownload = true }: UserCardProps) {
                     }}>
                         <div style={{ fontSize: '0.875rem', opacity: 0.9, marginBottom: 4 }}>You are in the</div>
                         <div style={{ fontSize: '1.75rem', fontWeight: 700, fontFamily: 'monospace' }}>
-                            Top {(100 - parseFloat(percentile)).toFixed(1)}%
+                            Top {(100 - parseFloat(percentile)).toFixed(2)}%
                         </div>
                         <div style={{ fontSize: '0.8125rem', opacity: 0.8 }}>of all contributors</div>
                     </div>
                 )}
 
-                {/* Next Magnitude Target - No Emoji */}
-                {nextMagInfo && (
+                {/* Next Magnitude Target - No Emoji - Hidden in compact mode */}
+                {!compact && nextMagInfo && (
                     <div style={{
                         marginBottom: 24,
                         padding: 16,
@@ -375,122 +376,131 @@ export default function UserCard({ user, showDownload = true }: UserCardProps) {
                     </div>
                 )}
 
-                {/* Activity Breakdown */}
-                <div style={{ marginBottom: 24 }}>
-                    <h4 style={{ marginBottom: 16 }}>Activity Breakdown</h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
-                        <div style={{ padding: 16, background: 'var(--seismic-gray-800)', borderRadius: 'var(--border-radius-sm)' }}>
-                            <div className="text-muted" style={{ fontSize: '0.875rem', marginBottom: 4 }}>First Activity</div>
-                            <div className="font-medium" style={{ color: 'var(--seismic-white)' }}>
-                                {formatDate(user.first_message_date)}
-                            </div>
-                        </div>
-                        <div style={{ padding: 16, background: 'var(--seismic-gray-800)', borderRadius: 'var(--border-radius-sm)' }}>
-                            <div className="text-muted" style={{ fontSize: '0.875rem', marginBottom: 4 }}>Last Activity</div>
-                            <div className="font-medium" style={{ color: 'var(--seismic-white)' }}>
-                                {formatDate(user.last_message_date)}
-                            </div>
-                        </div>
-                        <div style={{ padding: 16, background: 'var(--seismic-gray-800)', borderRadius: 'var(--border-radius-sm)' }}>
-                            <div className="text-muted" style={{ fontSize: '0.875rem', marginBottom: 4 }}>Active Days</div>
-                            <div className="font-medium" style={{ color: 'var(--seismic-white)' }}>
-                                {activityDays ? `${activityDays} days` : 'N/A'}
-                            </div>
-                        </div>
-                        <div style={{ padding: 16, background: 'var(--seismic-gray-800)', borderRadius: 'var(--border-radius-sm)' }}>
-                            <div className="text-muted" style={{ fontSize: '0.875rem', marginBottom: 4 }}>Avg. per Day</div>
-                            <div className="font-medium" style={{ color: 'var(--seismic-white)' }}>
-                                {messagesPerDay} per day
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
-                {/* Contribution Breakdown Bar */}
-                <div style={{ marginBottom: 24 }}>
-                    <h4 style={{ marginBottom: 12 }}>Contribution Breakdown</h4>
-                    <div style={{
-                        display: 'flex',
-                        height: 12,
-                        borderRadius: 6,
-                        overflow: 'hidden',
-                        background: 'var(--seismic-gray-800)'
-                    }}>
-                        {user.total_messages > 0 && (
-                            <>
-                                <div
-                                    style={{
-                                        width: `${(user.tweet / user.total_messages) * 100}%`,
-                                        background: 'var(--seismic-secondary)',
-                                    }}
-                                    title={`Tweets: ${((user.tweet / user.total_messages) * 100).toFixed(1)}%`}
-                                />
-                                <div
-                                    style={{
-                                        width: `${(user.art / user.total_messages) * 100}%`,
-                                        background: 'var(--seismic-accent)',
-                                    }}
-                                    title={`Art: ${((user.art / user.total_messages) * 100).toFixed(1)}%`}
-                                />
-                            </>
-                        )}
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: 24, marginTop: 8 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--seismic-secondary)' }} />
-                            <span className="text-muted" style={{ fontSize: '0.75rem' }}>
-                                Tweet ({user.total_messages > 0 ? ((user.tweet / user.total_messages) * 100).toFixed(0) : 0}%)
-                            </span>
+                {/* Extended Details - Only shown if not in compact mode */}
+                {!compact && (
+                    <>
+                        {/* Activity Breakdown */}
+                        <div style={{ marginBottom: 24 }}>
+                            <h4 style={{ marginBottom: 16 }}>Activity Breakdown</h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+                                <div style={{ padding: 16, background: 'var(--seismic-gray-800)', borderRadius: 'var(--border-radius-sm)' }}>
+                                    <div className="text-muted" style={{ fontSize: '0.875rem', marginBottom: 4 }}>First Activity</div>
+                                    <div className="font-medium" style={{ color: 'var(--seismic-white)' }}>
+                                        {formatDate(user.first_message_date)}
+                                    </div>
+                                </div>
+                                <div style={{ padding: 16, background: 'var(--seismic-gray-800)', borderRadius: 'var(--border-radius-sm)' }}>
+                                    <div className="text-muted" style={{ fontSize: '0.875rem', marginBottom: 4 }}>Last Activity</div>
+                                    <div className="font-medium" style={{ color: 'var(--seismic-white)' }}>
+                                        {formatDate(user.last_message_date)}
+                                    </div>
+                                </div>
+                                <div style={{ padding: 16, background: 'var(--seismic-gray-800)', borderRadius: 'var(--border-radius-sm)' }}>
+                                    <div className="text-muted" style={{ fontSize: '0.875rem', marginBottom: 4 }}>Active Days</div>
+                                    <div className="font-medium" style={{ color: 'var(--seismic-white)' }}>
+                                        {activityDays ? `${activityDays} days` : 'N/A'}
+                                    </div>
+                                </div>
+                                <div style={{ padding: 16, background: 'var(--seismic-gray-800)', borderRadius: 'var(--border-radius-sm)' }}>
+                                    <div className="text-muted" style={{ fontSize: '0.875rem', marginBottom: 4 }}>Avg. per Day</div>
+                                    <div className="font-medium" style={{ color: 'var(--seismic-white)' }}>
+                                        {messagesPerDay} per day
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                            <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--seismic-accent)' }} />
-                            <span className="text-muted" style={{ fontSize: '0.75rem' }}>
-                                Art ({user.total_messages > 0 ? ((user.art / user.total_messages) * 100).toFixed(0) : 0}%)
-                            </span>
-                        </div>
-                    </div>
-                </div>
 
-                {/* Roles */}
-                {displayRoles.length > 0 && (
-                    <div>
-                        <h4 style={{ marginBottom: 12 }}>Roles</h4>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                            {displayRoles.slice(0, 10).map((role, i) => {
-                                const iconPath = getRoleIconPath(role);
-                                return (
-                                    <span key={i} className="badge" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                        {iconPath && (
-                                            <img
-                                                src={iconPath}
-                                                alt=""
-                                                style={{ width: 14, height: 14, objectFit: 'contain' }}
-                                                crossOrigin="anonymous"
-                                            />
-                                        )}
-                                        {role}
+                        {/* Contribution Breakdown Bar */}
+                        <div style={{ marginBottom: 24 }}>
+                            <h4 style={{ marginBottom: 12 }}>Contribution Breakdown</h4>
+                            <div style={{
+                                display: 'flex',
+                                height: 12,
+                                borderRadius: 6,
+                                overflow: 'hidden',
+                                background: 'var(--seismic-gray-800)'
+                            }}>
+                                {user.total_messages > 0 && (
+                                    <>
+                                        <div
+                                            style={{
+                                                width: `${(user.tweet / user.total_messages) * 100}%`,
+                                                background: 'var(--seismic-secondary)',
+                                            }}
+                                            title={`Tweets: ${((user.tweet / user.total_messages) * 100).toFixed(1)}%`}
+                                        />
+                                        <div
+                                            style={{
+                                                width: `${(user.art / user.total_messages) * 100}%`,
+                                                background: 'var(--seismic-accent)',
+                                            }}
+                                            title={`Art: ${((user.art / user.total_messages) * 100).toFixed(1)}%`}
+                                        />
+                                    </>
+                                )}
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'center', gap: 24, marginTop: 8 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--seismic-secondary)' }} />
+                                    <span className="text-muted" style={{ fontSize: '0.75rem' }}>
+                                        Tweet ({user.total_messages > 0 ? ((user.tweet / user.total_messages) * 100).toFixed(0) : 0}%)
                                     </span>
-                                );
-                            })}
-                            {displayRoles.length > 10 && (
-                                <span className="badge">+{displayRoles.length - 10} more</span>
-                            )}
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--seismic-accent)' }} />
+                                    <span className="text-muted" style={{ fontSize: '0.75rem' }}>
+                                        Art ({user.total_messages > 0 ? ((user.art / user.total_messages) * 100).toFixed(0) : 0}%)
+                                    </span>
+                                </div>
+                            </div>
                         </div>
-                    </div>
+
+                        {/* Roles */}
+                        {displayRoles.length > 0 && (
+                            <div>
+                                <h4 style={{ marginBottom: 12 }}>Roles</h4>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                                    {displayRoles.slice(0, 10).map((role, i) => {
+                                        const iconPath = getRoleIconPath(role);
+                                        return (
+                                            <span key={i} className="badge" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                {iconPath && (
+                                                    <img
+                                                        src={iconPath}
+                                                        alt=""
+                                                        style={{ width: 14, height: 14, objectFit: 'contain' }}
+                                                        crossOrigin="anonymous"
+                                                    />
+                                                )}
+                                                {role}
+                                            </span>
+                                        );
+                                    })}
+                                    {displayRoles.length > 10 && (
+                                        <span className="badge">+{displayRoles.length - 10} more</span>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </>
                 )}
 
                 {/* Watermark for PNG */}
-                <div style={{
-                    marginTop: 20,
-                    paddingTop: 16,
-                    borderTop: '1px solid var(--seismic-gray-800)',
-                    textAlign: 'center'
-                }}>
-                    <span className="text-muted" style={{ fontSize: '0.6875rem' }}>
-                        seismic.community • Generated {new Date().toLocaleDateString()}
-                    </span>
-                </div>
+                {/* Watermark for PNG - Hidden in compact mode */}
+                {!compact && (
+                    <div style={{
+                        marginTop: 20,
+                        paddingTop: 16,
+                        borderTop: '1px solid var(--seismic-gray-800)',
+                        textAlign: 'center'
+                    }}>
+                        <span className="text-muted" style={{ fontSize: '0.6875rem' }}>
+                            seismic.community • Generated {new Date().toLocaleDateString()}
+                        </span>
+                    </div>
+                )}
             </div>
-        </div>
+        </div >
     );
 }
