@@ -254,11 +254,10 @@ export default function UserCard({ user, showDownload = true, compact = false }:
             <div
                 ref={cardRef}
                 id="card-capture-target"
-                className="card"
+                className={`card ${compact ? '' : 'user-card-main'}`}
                 style={{
                     padding: compact ? 16 : 24,
                     backgroundColor: '#0e0e0e', // Explicit dark bg for PNG
-                    minWidth: compact ? 'auto' : '500px', // Restore min-width
                     width: compact ? 'fit-content' : '100%', // Restore width logic
                     fontFamily: 'sans-serif', // Fallback font
                     // Border is back by default from class "card"

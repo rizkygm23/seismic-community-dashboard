@@ -157,7 +157,7 @@ export default function CompareUsers() {
     return (
         <div>
             {/* Search Inputs */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 24, alignItems: 'start' }}>
+            <div className="compare-grid">
                 {/* User 1 */}
                 <div>
                     <label className="text-muted" style={{ display: 'block', marginBottom: 8, fontSize: '0.875rem' }}>User 1</label>
@@ -273,12 +273,12 @@ function CompareRow({ label, val1, val2, rank1, rank2, color = 'var(--seismic-pr
     return (
         <div>
             <div className="text-muted" style={{ fontSize: '0.8125rem', marginBottom: 8 }}>{label}</div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 16, alignItems: 'center' }}>
+            <div className="compare-row">
                 <div style={{ textAlign: 'right' }}>
                     <div style={{ fontSize: '1.25rem', fontWeight: 700, color: winner === 'user1' ? color : 'var(--seismic-gray-400)' }}>{val1.toLocaleString()}</div>
                     <div className="text-muted" style={{ fontSize: '0.75rem' }}>#{rank1.toLocaleString()}</div>
                 </div>
-                <div style={{ width: 200, display: 'flex', height: 8, borderRadius: 4, overflow: 'hidden' }}>
+                <div className="compare-bar">
                     <div style={{ width: `${pct1}%`, background: winner === 'user1' ? color : 'var(--seismic-gray-800)' }} />
                     <div style={{ width: `${100 - pct1}%`, background: winner === 'user2' ? color : 'var(--seismic-gray-800)' }} />
                 </div>

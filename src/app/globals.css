@@ -920,6 +920,80 @@ a:hover {
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* Responsive Layouts */
+.compare-grid {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.compare-row {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 16px;
+  align-items: center;
+}
+
+.compare-bar {
+  width: 200px;
+  display: flex;
+  height: 8px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.user-card-main {
+  min-width: 500px;
+}
+
+@media (max-width: 768px) {
+  .compare-grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  /* Make the VS badge centered and smaller margin in mobile */
+  .compare-grid>div:nth-child(2) {
+    padding-top: 0 !important;
+    margin: -16px 0;
+  }
+
+  .compare-row {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .compare-row>div {
+    text-align: center !important;
+    justify-content: center !important;
+  }
+
+  /* Select the bar container */
+  .compare-row>div:nth-child(2) {
+    width: 100% !important;
+    margin: 4px 0;
+  }
+
+  /* Reset layout for stacked stats */
+  .compare-row>div:nth-child(1) {
+    order: 1;
+  }
+
+  .compare-row>div:nth-child(2) {
+    order: 2;
+  }
+
+  .compare-row>div:nth-child(3) {
+    order: 3;
+  }
+
+  .user-card-main {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
