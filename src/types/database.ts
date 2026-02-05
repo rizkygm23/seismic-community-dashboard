@@ -19,8 +19,9 @@ export interface SeismicUser {
     first_message_date: string | null;
     last_message_date: string | null;
     role_kamis: number | null;
-    role_sabtu: number | null;
+    role_jumat: number | null;
     is_promoted: boolean | null;
+    x_username: string | null;
     created_at: string;
     updated_at: string;
 }
