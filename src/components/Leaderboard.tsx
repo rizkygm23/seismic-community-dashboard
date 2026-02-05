@@ -129,23 +129,37 @@ export default function Leaderboard({ initialType = 'combined' }: LeaderboardPro
 
     return (
         <div>
-            {/* Tab Selector */}
-            <div className="tabs" style={{ marginBottom: 24 }}>
+            {/* Enhanced Tab Selector */}
+            <div className="tabs" style={{
+                marginBottom: 24,
+                background: 'linear-gradient(135deg, rgba(212, 187, 110, 0.05) 0%, rgba(130, 90, 96, 0.05) 100%)',
+                border: '2px solid var(--seismic-gray-800)',
+                padding: 6,
+            }}>
                 <button
                     className={`tab ${type === 'combined' ? 'active' : ''}`}
                     onClick={() => setType('combined')}
+                    style={{
+                        transition: 'all var(--transition-normal)',
+                    }}
                 >
                     Tweet + Art
                 </button>
                 <button
                     className={`tab ${type === 'tweet' ? 'active' : ''}`}
                     onClick={() => setType('tweet')}
+                    style={{
+                        transition: 'all var(--transition-normal)',
+                    }}
                 >
                     Tweet Only
                 </button>
                 <button
                     className={`tab ${type === 'art' ? 'active' : ''}`}
                     onClick={() => setType('art')}
+                    style={{
+                        transition: 'all var(--transition-normal)',
+                    }}
                 >
                     Art Only
                 </button>
@@ -169,25 +183,48 @@ export default function Leaderboard({ initialType = 'combined' }: LeaderboardPro
                             </tr>
                         </thead>
                         <tbody>
-                            {users.map((user) => {
+                            {users.map((user, index) => {
                                 const roleIcon = getHighestRoleIcon(user.roles);
                                 return (
                                     <tr
                                         key={user.id}
                                         onClick={() => setSelectedUser(user)}
-                                        style={{ cursor: 'pointer' }}
+                                        style={{
+                                            cursor: 'pointer',
+                                            animation: `slideInUp 0.3s ease-out ${index * 0.03}s both`,
+                                            transition: 'all var(--transition-normal)',
+                                        }}
                                         className="hover-row"
+                                        onMouseEnter={(e) => {
+                                            (e.currentTarget as HTMLTableRowElement).style.backgroundColor = 'rgba(212, 187, 110, 0.05)';
+                                            (e.currentTarget as HTMLTableRowElement).style.transform = 'scale(1.01)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            (e.currentTarget as HTMLTableRowElement).style.backgroundColor = 'transparent';
+                                            (e.currentTarget as HTMLTableRowElement).style.transform = 'scale(1)';
+                                        }}
                                     >
                                         <td>
-                                            <div className={`rank-badge ${getRankClass(user.rank!)}`}>
-                                                {user.rank}
+                                            <div className={`rank-badge ${getRankClass(user.rank!)}`} style={{
+                                                fontSize: '0.875rem',
+                                                fontWeight: 700,
+                                            }}>
+                                                {user.rank! <= 3 ? (
+                                                    <span style={{ fontSize: '1.2rem', marginRight: 2 }}>
+                                                        {user.rank === 1 ? '🥇' : user.rank === 2 ? '🥈' : '🥉'}
+                                                    </span>
+                                                ) : null}
+                                                #{user.rank}
                                             </div>
                                         </td>
                                         <td>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                                <div className="avatar avatar-sm">
+                                                <div className="avatar avatar-sm" style={{
+                                                    transition: 'all var(--transition-fast)',
+                                                    border: '2px solid transparent',
+                                                }}>
                                                     {user.avatar_url ? (
-                                                        <img src={user.avatar_url} alt={user.username} />
+                                                        <img src={user.avatar_url} alt={user.username} crossOrigin="anonymous" />
                                                     ) : (
                                                         user.username[0].toUpperCase()
                                                     )}
@@ -219,19 +256,19 @@ export default function Leaderboard({ initialType = 'combined' }: LeaderboardPro
                                         {type === 'combined' && (
                                             <>
                                                 <td style={{ textAlign: 'right' }}>
-                                                    <span className="text-secondary font-medium">
+                                                    <span className="text-secondary font-medium" style={{ display: 'inline-block', transition: 'all var(--transition-fast)' }}>
                                                         {user.tweet.toLocaleString()}
                                                     </span>
                                                 </td>
                                                 <td style={{ textAlign: 'right' }}>
-                                                    <span className="text-accent font-medium">
+                                                    <span className="text-accent font-medium" style={{ display: 'inline-block', transition: 'all var(--transition-fast)' }}>
                                                         {user.art.toLocaleString()}
                                                     </span>
                                                 </td>
                                             </>
                                         )}
                                         <td style={{ textAlign: 'right' }}>
-                                            <span className="font-semibold text-primary">
+                                            <span className="font-semibold text-primary" style={{ display: 'inline-block', fontSize: '1.0625rem', transition: 'all var(--transition-fast)' }}>
                                                 {getStatValue(user).toLocaleString()}
                                             </span>
                                         </td>
@@ -253,12 +290,29 @@ export default function Leaderboard({ initialType = 'combined' }: LeaderboardPro
                             className="btn btn-secondary w-full"
                             onClick={handleLoadMore}
                             disabled={loading}
+                            style={{
+                                transition: 'all var(--transition-normal)',
+                            }}
                         >
-                            {loading ? 'Loading...' : 'Load More'}
+                            {loading ? (
+                                <>
+                                    <span style={{
+                                        display: 'inline-block',
+                                        width: 16,
+                                        height: 16,
+                                        border: '2px solid currentColor',
+                                        borderTopColor: 'transparent',
+                                        borderRadius: '50%',
+                                        animation: 'spin 0.8s linear infinite',
+                                        marginRight: 8,
+                                    }} />
+                                    Loading...
+                                </>
+                            ) : 'Load More'}
                         </button>
                     ) : (
                         <p className="text-center text-muted" style={{ fontSize: '0.875rem' }}>
-                            End of leaderboard
+                            ✨ End of leaderboard
                         </p>
                     )}
                 </div>
@@ -271,6 +325,25 @@ export default function Leaderboard({ initialType = 'combined' }: LeaderboardPro
                     onClose={() => setSelectedUser(null)}
                 />
             )}
+
+            <style jsx>{`
+                @keyframes slideInUp {
+                    from {
+                        opacity: 0;
+                        transform: translateY(10px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+
+                @keyframes spin {
+                    to {
+                        transform: rotate(360deg);
+                    }
+                }
+            `}</style>
         </div>
     );
 }

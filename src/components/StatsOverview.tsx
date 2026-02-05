@@ -310,46 +310,90 @@ export default function StatsOverview() {
                 gap: 16,
                 marginBottom: 32
             }}>
-                <div className="card">
-                    <div className="stat-label">Active Users (30d)</div>
-                    <div className="stat-value"><EncryptedText text={stats.active_users_30d.toLocaleString()} enabled={isEncrypted} /></div>
-                    <div className="text-muted mt-2" style={{ fontSize: '0.8125rem' }}>
-                        <EncryptedText text={stats.active_users_7d.toLocaleString()} enabled={isEncrypted} /> active in 7d
+                {[
+                    {
+                        label: 'Active Users (30d)',
+                        value: stats.active_users_30d,
+                        subtext: `${stats.active_users_7d} active in 7d`,
+                        icon: '👥',
+                        gradient: 'linear-gradient(135deg, rgba(212, 187, 110, 0.1), transparent)',
+                    },
+                    {
+                        label: 'Total Contributions',
+                        value: stats.total_messages,
+                        subtext: 'Tweet + Art combined',
+                        icon: '📊',
+                        gradient: 'linear-gradient(135deg, rgba(212, 187, 110, 0.1), transparent)',
+                        color: 'var(--seismic-primary)',
+                    },
+                    {
+                        label: 'Tweet Contributions',
+                        value: stats.tweet_messages,
+                        subtext: `${stats.total_messages > 0 ? ((stats.tweet_messages / stats.total_messages) * 100).toFixed(1) : 0}% of total`,
+                        icon: '💬',
+                        gradient: 'linear-gradient(135deg, rgba(201, 138, 148, 0.1), transparent)',
+                        color: 'var(--seismic-secondary)',
+                    },
+                    {
+                        label: 'Art Contributions',
+                        value: stats.art_messages,
+                        subtext: `${stats.total_messages > 0 ? ((stats.art_messages / stats.total_messages) * 100).toFixed(1) : 0}% of total`,
+                        icon: '🎨',
+                        gradient: 'linear-gradient(135deg, rgba(181, 142, 153, 0.1), transparent)',
+                        color: 'var(--seismic-accent)',
+                    },
+                ].map((stat, index) => (
+                    <div
+                        key={stat.label}
+                        className="card"
+                        style={{
+                            position: 'relative',
+                            overflow: 'hidden',
+                            background: stat.gradient,
+                            animation: `slideInUp 0.4s ease-out ${index * 0.05}s both`,
+                            transition: 'all var(--transition-normal)',
+                        }}
+                        onMouseEnter={(e) => {
+                            (e.currentTarget as HTMLElement).style.transform = 'translateY(-4px)';
+                        }}
+                        onMouseLeave={(e) => {
+                            (e.currentTarget as HTMLElement).style.transform = 'translateY(0)';
+                        }}
+                    >
+                        <div style={{
+                            position: 'absolute',
+                            top: -20,
+                            right: -20,
+                            fontSize: '5rem',
+                            opacity: 0.1,
+                        }}>
+                            {stat.icon}
+                        </div>
+                        <div style={{ position: 'relative', zIndex: 1 }}>
+                            <div className="stat-label">{stat.label}</div>
+                            <div className="stat-value" style={{ color: stat.color || 'inherit' }}>
+                                <EncryptedText text={stat.value.toLocaleString()} enabled={isEncrypted} />
+                            </div>
+                            <div className="text-muted mt-2" style={{ fontSize: '0.8125rem' }}>
+                                <EncryptedText text={stat.subtext} enabled={isEncrypted} />
+                            </div>
+                        </div>
                     </div>
-                </div>
-
-                <div className="card">
-                    <div className="stat-label">Total Contributions</div>
-                    <div className="stat-value text-primary"><EncryptedText text={stats.total_messages.toLocaleString()} enabled={isEncrypted} /></div>
-                    <div className="text-muted mt-2" style={{ fontSize: '0.8125rem' }}>
-                        Tweet + Art combined
-                    </div>
-                </div>
-
-                <div className="card">
-                    <div className="stat-label">Tweet Contributions</div>
-                    <div className="stat-value text-secondary"><EncryptedText text={stats.tweet_messages.toLocaleString()} enabled={isEncrypted} /></div>
-                    <div className="text-muted mt-2" style={{ fontSize: '0.8125rem' }}>
-                        {stats.total_messages > 0
-                            ? <><EncryptedText text={((stats.tweet_messages / stats.total_messages) * 100).toFixed(1)} enabled={isEncrypted} />% of total</>
-                            : '0% of total'}
-                    </div>
-                </div>
-
-                <div className="card">
-                    <div className="stat-label">Art Contributions</div>
-                    <div className="stat-value text-accent"><EncryptedText text={stats.art_messages.toLocaleString()} enabled={isEncrypted} /></div>
-                    <div className="text-muted mt-2" style={{ fontSize: '0.8125rem' }}>
-                        {stats.total_messages > 0
-                            ? <><EncryptedText text={((stats.art_messages / stats.total_messages) * 100).toFixed(1)} enabled={isEncrypted} />% of total</>
-                            : '0% of total'}
-                    </div>
-                </div>
-
-
-
-
+                ))}
             </div>
+
+            <style jsx>{`
+                @keyframes slideInUp {
+                    from {
+                        opacity: 0;
+                        transform: translateY(20px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+            `}</style>
 
             {/* Two Column Layout */}
             <div style={{

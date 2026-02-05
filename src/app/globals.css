@@ -192,17 +192,34 @@ a:hover {
   cursor: pointer;
   transition: all var(--transition-normal);
   outline: none;
+  position: relative;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--border-radius);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), transparent);
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+  pointer-events: none;
+}
+
+.btn:hover::before {
+  opacity: 1;
 }
 
 .btn-primary {
   background-color: var(--seismic-primary);
   color: var(--seismic-black);
+  box-shadow: 0 0 20px rgba(212, 187, 110, 0.3);
 }
 
 .btn-primary:hover {
   background-color: var(--seismic-primary-light);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 8px 30px rgba(212, 187, 110, 0.4);
 }
 
 .btn-primary:active {
@@ -212,18 +229,19 @@ a:hover {
 .btn-secondary {
   background-color: var(--seismic-gray-800);
   color: var(--seismic-gray-200);
-  border: 1px solid var(--seismic-gray-700);
+  border: 2px solid var(--seismic-gray-700);
 }
 
 .btn-secondary:hover {
   background-color: var(--seismic-gray-700);
   border-color: var(--seismic-gray-600);
+  transform: translateY(-1px);
 }
 
 .btn-ghost {
   background-color: transparent;
   color: var(--seismic-gray-300);
-  border: 1px solid transparent;
+  border: 2px solid transparent;
 }
 
 .btn-ghost:hover {
@@ -240,11 +258,28 @@ a:hover {
   transition: all var(--transition-normal);
   backdrop-filter: blur(8px);
   /* Glassmorphism for privacy feel */
+  position: relative;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: var(--border-radius-lg);
+  background: linear-gradient(135deg, rgba(212, 187, 110, 0.1), rgba(130, 90, 96, 0.05));
+  opacity: 0;
+  transition: opacity var(--transition-normal);
+  pointer-events: none;
 }
 
 .card:hover {
   border-color: var(--seismic-gray-700);
   box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.card:hover::before {
+  opacity: 1;
 }
 
 .card-header {
@@ -268,8 +303,8 @@ a:hover {
   padding: 14px 18px;
   font-family: var(--font-main);
   font-size: 1rem;
-  background-color: var(--seismic-gray-900);
-  border: 1px solid var(--seismic-gray-700);
+  background: linear-gradient(135deg, var(--seismic-gray-900), rgba(212, 187, 110, 0.02));
+  border: 2px solid var(--seismic-gray-700);
   border-radius: var(--border-radius);
   color: var(--seismic-white);
   transition: all var(--transition-fast);
@@ -280,40 +315,55 @@ a:hover {
   color: var(--seismic-gray-500);
 }
 
+.input:hover {
+  border-color: var(--seismic-gray-600);
+  box-shadow: 0 0 12px rgba(212, 187, 110, 0.1);
+}
+
 .input:focus {
   border-color: var(--seismic-primary);
-  box-shadow: 0 0 0 3px rgba(166, 146, 77, 0.15);
+  box-shadow: 0 0 0 4px rgba(212, 187, 110, 0.2), 0 0 12px rgba(212, 187, 110, 0.3);
+  background: linear-gradient(135deg, var(--seismic-gray-900), rgba(212, 187, 110, 0.05));
 }
 
 /* Badge */
 .badge {
   display: inline-flex;
   align-items: center;
-  padding: 4px 10px;
+  padding: 6px 12px;
   font-size: 0.75rem;
-  font-weight: 500;
+  font-weight: 600;
   font-family: var(--font-mono);
   /* Monospace badge */
   border-radius: 99px;
   background-color: var(--seismic-gray-800);
   color: var(--seismic-gray-300);
   letter-spacing: -0.02em;
+  border: 1px solid var(--seismic-gray-700);
+  transition: all var(--transition-fast);
+}
+
+.badge:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .badge-primary {
-  background-color: rgba(166, 146, 77, 0.15);
+  background: linear-gradient(135deg, rgba(212, 187, 110, 0.2), rgba(212, 187, 110, 0.1));
   color: var(--seismic-primary);
+  border-color: var(--seismic-primary);
 }
 
 .badge-secondary {
-  background-color: rgba(130, 90, 96, 0.15);
+  background: linear-gradient(135deg, rgba(201, 138, 148, 0.2), rgba(201, 138, 148, 0.1));
   color: var(--seismic-secondary);
+  border-color: var(--seismic-secondary);
 }
 
 .badge-accent {
-  background-color: rgba(82, 53, 66, 0.15);
+  background: linear-gradient(135deg, rgba(181, 142, 153, 0.2), rgba(181, 142, 153, 0.1));
   color: #d8b4be;
-  /* Lighter version of accent for text readability */
+  border-color: #d8b4be;
 }
 
 /* Avatar */
@@ -321,7 +371,7 @@ a:hover {
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background-color: var(--seismic-gray-700);
+  background: linear-gradient(135deg, var(--seismic-gray-700), var(--seismic-gray-800));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -329,6 +379,15 @@ a:hover {
   color: var(--seismic-gray-300);
   overflow: hidden;
   flex-shrink: 0;
+  border: 2px solid var(--seismic-gray-700);
+  transition: all var(--transition-fast);
+  box-shadow: 0 0 12px rgba(212, 187, 110, 0.1);
+}
+
+.avatar:hover {
+  border-color: var(--seismic-primary);
+  box-shadow: 0 0 16px rgba(212, 187, 110, 0.3);
+  transform: scale(1.05);
 }
 
 .avatar img {
@@ -401,7 +460,8 @@ a:hover {
 }
 
 .table tr:hover td {
-  background-color: rgba(255, 255, 255, 0.02);
+  background-color: rgba(212, 187, 110, 0.08);
+  transition: background-color var(--transition-fast);
 }
 
 .table tr:last-child td {
@@ -413,9 +473,10 @@ a:hover {
   position: sticky;
   top: 0;
   z-index: 100;
-  background-color: rgba(10, 10, 11, 0.9);
+  background-color: rgba(10, 10, 11, 0.95);
   backdrop-filter: blur(12px);
-  border-bottom: 1px solid var(--seismic-gray-800);
+  border-bottom: 2px solid var(--seismic-gray-800);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .nav-content {
@@ -462,11 +523,12 @@ a:hover {
 /* Tabs */
 .tabs {
   display: flex;
-  gap: 4px;
-  background-color: var(--seismic-gray-900);
-  padding: 4px;
+  gap: 6px;
+  background-color: transparent;
+  padding: 6px;
   border-radius: var(--border-radius);
-  border: 1px solid var(--seismic-gray-800);
+  border: 2px solid var(--seismic-gray-800);
+  background: linear-gradient(135deg, rgba(212, 187, 110, 0.05) 0%, rgba(130, 90, 96, 0.05) 100%);
 }
 
 .tab {
@@ -476,19 +538,24 @@ a:hover {
   font-weight: 500;
   color: var(--seismic-gray-400);
   background: none;
-  border: none;
+  border: 2px solid transparent;
   border-radius: var(--border-radius-sm);
   cursor: pointer;
   transition: all var(--transition-fast);
+  position: relative;
 }
 
 .tab:hover {
   color: var(--seismic-gray-200);
+  background-color: rgba(255, 255, 255, 0.05);
 }
 
 .tab.active {
-  background-color: var(--seismic-gray-700);
+  background: linear-gradient(135deg, var(--seismic-gray-700), var(--seismic-gray-800));
   color: var(--seismic-white);
+  border-color: var(--seismic-primary);
+  box-shadow: 0 0 12px rgba(212, 187, 110, 0.15);
+  font-weight: 600;
 }
 
 /* Loading */
@@ -527,6 +594,67 @@ a:hover {
   }
 }
 
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Enhanced Animations */
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(212, 187, 110, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(212, 187, 110, 0.4);
+  }
+}
+
+@keyframes shimmerGlow {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
 /* Rank Badge */
 .rank-badge {
   min-width: 32px;
@@ -537,6 +665,7 @@ a:hover {
   font-size: 0.875rem;
   font-weight: 700;
   border-radius: 8px;
+  transition: all var(--transition-fast);
 }
 
 .rank-1 {
@@ -571,17 +700,24 @@ a:hover {
   padding: 16px 24px;
   padding-left: 52px;
   font-size: 1.0625rem;
-  background-color: var(--seismic-gray-900);
+  background: linear-gradient(135deg, var(--seismic-gray-900), rgba(212, 187, 110, 0.02));
   border: 2px solid var(--seismic-gray-700);
   border-radius: 60px;
   color: var(--seismic-white);
   transition: all var(--transition-normal);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.search-input:hover {
+  border-color: var(--seismic-gray-600);
+  box-shadow: 0 8px 24px rgba(212, 187, 110, 0.15);
 }
 
 .search-input:focus {
   border-color: var(--seismic-primary);
-  box-shadow: 0 0 0 4px rgba(166, 146, 77, 0.1);
+  box-shadow: 0 0 0 4px rgba(212, 187, 110, 0.25), 0 8px 32px rgba(212, 187, 110, 0.2);
   outline: none;
+  background: linear-gradient(135deg, var(--seismic-gray-900), rgba(212, 187, 110, 0.05));
 }
 
 .search-icon {
@@ -590,21 +726,41 @@ a:hover {
   top: 50%;
   transform: translateY(-50%);
   color: var(--seismic-gray-500);
+  transition: color var(--transition-fast);
+}
+
+.search-input:focus ~ .search-icon {
+  color: var(--seismic-primary);
 }
 
 /* Progress Bar */
 .progress-bar {
-  height: 6px;
+  height: 8px;
   background-color: var(--seismic-gray-800);
-  border-radius: 3px;
+  border-radius: 4px;
   overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .progress-fill {
   height: 100%;
-  background-color: var(--seismic-primary);
-  border-radius: 3px;
+  background: linear-gradient(90deg, var(--seismic-primary), var(--seismic-primary-light));
+  border-radius: 4px;
   transition: width var(--transition-slow);
+  box-shadow: 0 0 10px rgba(212, 187, 110, 0.4);
+  position: relative;
+}
+
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  border-radius: 4px;
+  animation: shimmerGlow 2s infinite;
 }
 
 /* Empty State */
