@@ -153,14 +153,7 @@ export default function PromotionPage() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 60 }}>
                     {sortedMagnitudes.map((mag) => (
                         <div key={mag} id={`mag-${mag}`}>
-                            <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                marginBottom: 24,
-                                borderBottom: '1px solid var(--seismic-gray-800)',
-                                paddingBottom: 16
-                            }}>
+                            <div className="promotion-header">
                                 <h2 style={{
                                     fontSize: '2rem',
                                     fontWeight: 700,
@@ -200,11 +193,7 @@ export default function PromotionPage() {
                                 </button>
                             </div>
 
-                            <div style={{
-                                display: 'grid',
-                                gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-                                gap: 24
-                            }}>
+                            <div className="grid-promotion">
                                 {groupedUsers[mag].map((user, index) => (
                                     <ElectricBorder
                                         key={user.id}

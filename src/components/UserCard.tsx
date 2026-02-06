@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import { getRoleIconPath, getHighestRoleIcon } from '@/lib/roleUtils';
 // @ts-ignore - Importing JS component
 import ElectricBorder from './ElectricBorder';
-import html2canvas from 'html2canvas';
+
 
 interface UserCardProps {
     user: SeismicUser;
@@ -25,7 +25,6 @@ interface RankInfo {
 export default function UserCard({ user, showDownload = true, compact = false }: UserCardProps) {
     const [rankInfo, setRankInfo] = useState<RankInfo | null>(null);
     const [loading, setLoading] = useState(true);
-    const [downloading, setDownloading] = useState(false);
     const cardRef = useRef<HTMLDivElement>(null);
 
     const getCurrentMagnitude = () => {
@@ -102,38 +101,6 @@ export default function UserCard({ user, showDownload = true, compact = false }:
 
         fetchRanks();
     }, [user]);
-
-    const handleDownloadPNG = async () => {
-        if (!cardRef.current) return;
-
-        setDownloading(true);
-        try {
-            await new Promise(r => setTimeout(r, 100)); // Allow layout to stabilize if needed
-
-            const canvas = await html2canvas(cardRef.current, {
-                backgroundColor: '#0a0a0a', // Force dark background
-                scale: 2,
-                useCORS: true,
-                logging: false,
-                width: cardRef.current.scrollWidth, // Capture full width
-                height: cardRef.current.scrollHeight, // Capture full height
-                onclone: (document) => {
-                    // Hacky fix to force font smoothing or styles in clone if needed
-                    const el = document.getElementById('card-capture-target');
-                    if (el) el.style.fontFamily = 'Inter, system-ui, sans-serif';
-                }
-            });
-
-            const link = document.createElement('a');
-            link.download = `${user.username}-seismic-stats.png`;
-            link.href = canvas.toDataURL('image/png');
-            link.click();
-        } catch (error) {
-            console.error('Error generating PNG:', error);
-        } finally {
-            setDownloading(false);
-        }
-    };
 
     const formatDate = (dateStr: string | null) => {
         if (!dateStr) return 'N/A';
@@ -214,51 +181,13 @@ export default function UserCard({ user, showDownload = true, compact = false }:
 
     return (
         <div style={{ maxWidth: 600, margin: '0 auto' }}>
-            {/* Download Button */}
-            {/* Download Button */}
-            {showDownload && (
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-                    <button
-                        onClick={handleDownloadPNG}
-                        disabled={downloading || loading}
-                        className="btn btn-secondary"
-                        style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 8,
-                            padding: '8px 16px',
-                            fontSize: '0.875rem',
-                        }}
-                    >
-                        {downloading ? (
-                            <>
-                                <div className="spinner" style={{ width: 14, height: 14 }} />
-                                Generating...
-                            </>
-                        ) : (
-                            <>
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                    <polyline points="7 10 12 15 17 10" />
-                                    <line x1="12" y1="15" x2="12" y2="3" />
-                                </svg>
-                                Save as PNG
-                            </>
-                        )}
-                    </button>
-                </div>
-            )}
-
-            {/* Card Content - Fixed Layout for Capture */}
-
             <div
                 ref={cardRef}
                 id="card-capture-target"
-                className={`card ${compact ? '' : 'user-card-main'}`}
+                className={`card ${compact ? 'user-card-compact' : 'user-card-main'}`}
                 style={{
                     padding: compact ? 16 : 24,
                     backgroundColor: '#0e0e0e', // Explicit dark bg for PNG
-                    width: compact ? 'fit-content' : '100%', // Restore width logic
                     fontFamily: 'sans-serif', // Fallback font
                     // Border is back by default from class "card"
                 }}
@@ -337,10 +266,7 @@ export default function UserCard({ user, showDownload = true, compact = false }:
                 )}
 
                 {/* Contribution Stats */}
-                <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(3, 1fr)',
-                    gap: 16,
+                <div className="grid-stats" style={{
                     marginBottom: 24,
                     padding: 20,
                     background: 'var(--seismic-gray-800)',
@@ -445,7 +371,7 @@ export default function UserCard({ user, showDownload = true, compact = false }:
                         {/* Activity Breakdown */}
                         <div style={{ marginBottom: 24 }}>
                             <h4 style={{ marginBottom: 16 }}>Activity Breakdown</h4>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+                            <div className="grid-activity">
                                 <div style={{ padding: 16, background: 'var(--seismic-gray-800)', borderRadius: 'var(--border-radius-sm)' }}>
                                     <div className="text-muted" style={{ fontSize: '0.875rem', marginBottom: 4 }}>First Activity</div>
                                     <div className="font-medium" style={{ color: 'var(--seismic-white)' }}>
@@ -548,7 +474,6 @@ export default function UserCard({ user, showDownload = true, compact = false }:
                     </>
                 )}
 
-                {/* Watermark for PNG */}
                 {/* Watermark for PNG - Hidden in compact mode */}
                 <div style={{
                     marginTop: 20,

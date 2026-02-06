@@ -22,12 +22,7 @@ export default function HomePage() {
       <UserSearch />
 
       {/* Quick Stats Preview */}
-      <div style={{
-        marginTop: 80,
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-        gap: 20,
-      }}>
+      <div className="grid-home" style={{ marginTop: 80 }}>
         <a href="/leaderboard" className="card group" style={{
           textDecoration: 'none',
           cursor: 'pointer',

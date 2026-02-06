@@ -68,28 +68,8 @@ export default function UserDetailModal({ user: initialUser, onClose }: UserDeta
     }, [initialUser]);
 
     return (
-        <div style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-            backdropFilter: 'blur(4px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-            padding: 20
-        }}>
-            <div ref={modalRef} style={{
-                width: 'fit-content',
-                maxWidth: '95vw',
-                position: 'relative',
-                maxHeight: '90vh',
-                display: 'flex',
-                flexDirection: 'column'
-            }}>
+        <div className="modal-overlay">
+            <div ref={modalRef} className="modal-content-wrapper">
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8, paddingRight: 8 }}>
                     <button
                         onClick={onClose}

@@ -828,6 +828,61 @@ a:hover {
   white-space: nowrap;
 }
 
+/* Responsive Grids */
+.grid-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.grid-activity {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.grid-home {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.grid-explore {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+  align-items: start;
+}
+
+.grid-stats-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+.grid-stats-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.grid-promotion {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+}
+
+.promotion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--seismic-gray-800);
+  padding-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
 /* Animation on scroll */
 .fade-in {
   animation: fadeIn 0.5s ease forwards;
@@ -947,7 +1002,42 @@ a:hover {
   min-width: 500px;
 }
 
+.page-padding {
+  padding-top: 48px;
+  padding-bottom: 48px;
+}
+
 @media (max-width: 768px) {
+  .page-padding {
+    padding-top: 24px;
+    padding-bottom: 32px;
+  }
+}
+
+@media (max-width: 768px) {
+  .grid-stats {
+    grid-template-columns: 1fr;
+    /* Stack vertically on mobile */
+  }
+
+  .grid-activity {
+    grid-template-columns: 1fr;
+    /* Stack vertically on mobile */
+  }
+
+  .grid-explore {
+    grid-template-columns: 1fr;
+  }
+
+  .promotion-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .promotion-header .btn {
+    width: 100%;
+  }
+
   .compare-grid {
     grid-template-columns: 1fr;
     gap: 32px;
@@ -992,6 +1082,14 @@ a:hover {
     min-width: 0 !important;
     width: 100% !important;
   }
+
+  /* Specific mobile adjustments */
+  .container {
+    padding-left: 16px;
+    padding-right: 16px;
+    width: 100%;
+    overflow-x: hidden;
+  }
 }
 
 @layer base {
@@ -1001,5 +1099,49 @@ a:hover {
 
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* Modal classes to replace inline styles */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+}
+
+.modal-content-wrapper {
+  width: fit-content;
+  max-width: 95vw;
+  position: relative;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.user-card-compact {
+  width: fit-content;
+}
+
+@media (max-width: 768px) {
+  .modal-overlay {
+    align-items: flex-start;
+    padding-top: 80px;
+    /* Position higher on mobile */
+    padding-bottom: 20px;
+  }
+
+  .modal-content-wrapper {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .user-card-compact {
+    width: 100% !important;
   }
 }

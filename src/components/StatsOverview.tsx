@@ -304,12 +304,7 @@ export default function StatsOverview() {
             </div>
 
             {/* Main Stats Grid */}
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: 16,
-                marginBottom: 32
-            }}>
+            <div className="grid-stats-cards" style={{ marginBottom: 32 }}>
                 <div className="card">
                     <div className="stat-label">Active Users (30d)</div>
                     <div className="stat-value"><EncryptedText text={stats.active_users_30d.toLocaleString()} enabled={isEncrypted} /></div>
@@ -352,11 +347,7 @@ export default function StatsOverview() {
             </div>
 
             {/* Two Column Layout */}
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-                gap: 24
-            }}>
+            <div className="grid-stats-overview">
                 {/* Top Contributors */}
                 <div className="card">
                     <div className="card-header">
