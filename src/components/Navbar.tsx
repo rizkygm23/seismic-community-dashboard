@@ -12,6 +12,7 @@ export default function Navbar() {
         { href: '/', label: 'Search' },
         { href: '/leaderboard', label: 'Leaderboard' },
         { href: '/stats', label: 'Statistics' },
+        { href: '/global', label: 'Global' },
         { href: '/explore', label: 'Explore' },
         { href: '/compare', label: 'Compare' },
         { href: '/promotion', label: 'Promotion' },
