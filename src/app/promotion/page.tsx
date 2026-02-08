@@ -9,15 +9,15 @@ import { getHighestMagnitudeRole } from '@/lib/roleUtils';
 import ElectricBorder from '@/components/ElectricBorder';
 
 const MAGNITUDE_COLORS: Record<number, string> = {
-    1: '#78716c', // Stone 500
-    2: '#a8a29e', // Stone 400
-    3: '#fef3c7', // Amber 100
-    4: '#22c55e', // Green 500
-    5: '#3b82f6', // Blue 500
-    6: '#8b5cf6', // Violet 500
-    7: '#ec4899', // Pink 500
-    8: '#ef4444', // Red 500
-    9: '#eab308', // Yellow 500 (Gold)
+    1: '#F9EC9E',
+    2: '#64CCA9',
+    3: '#30C82B',
+    4: '#79E20A',
+    5: '#8BA411',
+    6: '#C89A03',
+    7: '#955200',
+    8: '#C9442E',
+    9: '#00ADE0',
 };
 
 export default function PromotionPage() {
