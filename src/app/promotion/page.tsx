@@ -57,7 +57,7 @@ export default function PromotionPage() {
             return;
         }
 
-        const text = `Congratulations on your promotion to Magnitude ${magnitude}! 🥂\n\n${xTags}\n\nWell deserved! 🚀 #SeismicCommunity`;
+        const text = `Congratulations on your promotion to Magnitude ${magnitude}! 🥂\n\n${xTags}\n\nWell deserved! 🚀 #SeismicCommunity\n\nsource:\nhttps://x.com/RizzDroop23/status/2019850831378673743?s=20`;
         const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
 
         window.open(url, '_blank', 'noopener,noreferrer');

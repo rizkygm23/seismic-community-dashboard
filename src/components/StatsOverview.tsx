@@ -603,7 +603,8 @@ export default function StatsOverview() {
                                                     minWidth: 24,
                                                     height: 24,
                                                     fontSize: '0.75rem',
-                                                    background: index < 3 ? barColor : undefined
+                                                    background: index < 3 ? barColor : undefined,
+                                                    color: index < 3 ? '#000' : undefined,
                                                 }}>
                                                     {index + 1}
                                                 </span>
