@@ -22,6 +22,7 @@ export interface SeismicUser {
     role_jumat: number | null;
     is_promoted: boolean | null;
     x_username: string | null;
+    region: string | null;
     created_at: string;
     updated_at: string;
 }
@@ -65,4 +66,10 @@ export interface CommunityStats {
 export interface RoleDistribution {
     role_name: string;
     user_count: number;
+}
+
+export interface RegionDistribution {
+    region: string;
+    user_count: number;
+    total_contributions: number;
 }

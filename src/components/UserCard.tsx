@@ -247,11 +247,25 @@ export default function UserCard({ user, showDownload = true, compact = false }:
                             )}
                         </h2>
                         <div className="text-muted" style={{ fontSize: '1rem' }}>@{user.username}</div>
-                        {user.joined_at && (
-                            <div className="text-muted" style={{ fontSize: '0.875rem', marginTop: 4 }}>
-                                Joined {formatDate(user.joined_at)}
-                            </div>
-                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 4, flexWrap: 'wrap' }}>
+                            {user.joined_at && (
+                                <div className="text-muted" style={{ fontSize: '0.875rem' }}>
+                                    Joined {formatDate(user.joined_at)}
+                                </div>
+                            )}
+                            {user.region && (
+                                <div style={{
+                                    fontSize: '0.75rem',
+                                    padding: '2px 8px',
+                                    background: `${themeColor}30`,
+                                    border: `1px solid ${themeColor}50`,
+                                    borderRadius: 'var(--border-radius-sm)',
+                                    color: themeColor,
+                                }}>
+                                    {user.region}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 

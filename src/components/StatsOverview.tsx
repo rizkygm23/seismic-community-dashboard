@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { CommunityStats, RoleDistribution } from '@/types/database';
+import { CommunityStats, RoleDistribution, RegionDistribution } from '@/types/database';
 import { getHighestRoleIcon, getRoleIconPath } from '@/lib/roleUtils';
 import EncryptedText from './EncryptedText';
 import TerminalLoader from './TerminalLoader';
@@ -21,6 +21,7 @@ interface TopContributor {
 export default function StatsOverview() {
     const [stats, setStats] = useState<CommunityStats | null>(null);
     const [roleStats, setRoleStats] = useState<RoleDistribution[]>([]);
+    const [regionStats, setRegionStats] = useState<RegionDistribution[]>([]);
     const [topContributors, setTopContributors] = useState<TopContributor[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedUser, setSelectedUser] = useState<TopContributor | null>(null);
@@ -164,6 +165,45 @@ export default function StatsOverview() {
                     .map(([role_name, user_count]) => ({ role_name, user_count }));
 
                 setRoleStats(sortedRoles);
+
+                // Fetch region statistics
+                const regionMap = new Map<string, { user_count: number; total_contributions: number }>();
+                let regionOffset = 0;
+                let hasMoreRegions = true;
+
+                while (hasMoreRegions) {
+                    const { data: regionBatch } = await supabase
+                        .from('seismic_dc_user')
+                        .select('region, total_messages')
+                        .eq('is_bot', false)
+                        .not('region', 'is', null)
+                        .range(regionOffset, regionOffset + batchSize - 1);
+
+                    if (regionBatch && regionBatch.length > 0) {
+                        regionBatch.forEach((row: { region: string | null; total_messages: number }) => {
+                            if (row.region) {
+                                const existing = regionMap.get(row.region) || { user_count: 0, total_contributions: 0 };
+                                existing.user_count += 1;
+                                existing.total_contributions += row.total_messages || 0;
+                                regionMap.set(row.region, existing);
+                            }
+                        });
+                        regionOffset += batchSize;
+                        hasMoreRegions = regionBatch.length === batchSize;
+                    } else {
+                        hasMoreRegions = false;
+                    }
+                }
+
+                const sortedRegions = Array.from(regionMap.entries())
+                    .sort((a, b) => b[1].user_count - a[1].user_count)
+                    .map(([region, data]) => ({
+                        region,
+                        user_count: data.user_count,
+                        total_contributions: data.total_contributions,
+                    }));
+
+                setRegionStats(sortedRegions);
 
                 // Get basic stats if RPC doesn't exist, use fallback
                 if (statsResult.error) {
@@ -528,6 +568,83 @@ export default function StatsOverview() {
                     </div>
                 </div>
             </div>
+
+            {/* Region Distribution */}
+            {regionStats.length > 0 && (
+                <div className="card" style={{ marginTop: 24 }}>
+                    <div className="card-header">
+                        <h3 className="card-title">Region Distribution</h3>
+                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                            {regionStats.length} regions • {regionStats.reduce((sum, r) => sum + r.user_count, 0).toLocaleString()} users
+                        </span>
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        {(() => {
+                            const maxRegionCount = Math.max(...regionStats.map(r => r.user_count), 1);
+                            const totalRegionUsers = regionStats.reduce((sum, r) => sum + r.user_count, 0);
+
+                            return regionStats.slice(0, 15).map((region, index) => {
+                                const percentage = ((region.user_count / totalRegionUsers) * 100).toFixed(1);
+                                const avgContrib = region.user_count > 0 ? Math.round(region.total_contributions / region.user_count) : 0;
+
+                                // Use consistent seismic primary color
+                                const barColor = 'var(--seismic-primary)';
+
+                                return (
+                                    <div key={region.region}>
+                                        <div style={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            marginBottom: 4,
+                                            fontSize: '0.875rem'
+                                        }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                <span className="rank-badge rank-default" style={{
+                                                    minWidth: 24,
+                                                    height: 24,
+                                                    fontSize: '0.75rem',
+                                                    background: index < 3 ? barColor : undefined
+                                                }}>
+                                                    {index + 1}
+                                                </span>
+                                                <span style={{ fontWeight: 500 }}>
+                                                    <EncryptedText text={region.region} enabled={isEncrypted} />
+                                                </span>
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: '0.8125rem' }}>
+                                                <span className="text-muted">
+                                                    <EncryptedText text={region.user_count.toLocaleString()} enabled={isEncrypted} /> users
+                                                </span>
+                                                <span style={{ color: 'var(--seismic-primary)', fontWeight: 500 }}>
+                                                    {percentage}%
+                                                </span>
+                                                <span className="text-muted" title="Average contributions per user">
+                                                    ~<EncryptedText text={avgContrib.toLocaleString()} enabled={isEncrypted} />/user
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="progress-bar">
+                                            <div
+                                                className="progress-fill"
+                                                style={{
+                                                    width: `${(region.user_count / maxRegionCount) * 100}%`,
+                                                    background: barColor,
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                );
+                            });
+                        })()}
+                        {regionStats.length > 15 && (
+                            <div className="text-muted" style={{ textAlign: 'center', fontSize: '0.8125rem', paddingTop: 8 }}>
+                                + {regionStats.length - 15} more regions
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
             {/* User Detail Modal */}
             {selectedUser && (
                 <UserDetailModal
