@@ -7,6 +7,21 @@ import { getRoleIconPath, getHighestRoleIcon } from '@/lib/roleUtils';
 // @ts-ignore - Importing JS component
 import ElectricBorder from './ElectricBorder';
 
+// Magnitude color theme mapping
+const MAGNITUDE_COLORS: Record<number, string> = {
+    1: '#F9EC9E',
+    2: '#64CCA9',
+    3: '#30C82B',
+    4: '#79E20A',
+    5: '#8BA411',
+    6: '#C89A03',
+    7: '#955200',
+    8: '#C9442E',
+    9: '#00ADE0',
+};
+
+// Default color for users without magnitude
+const DEFAULT_THEME_COLOR = '#A6924D';
 
 interface UserCardProps {
     user: SeismicUser;
@@ -26,6 +41,7 @@ export default function UserCard({ user, showDownload = true, compact = false }:
     const [rankInfo, setRankInfo] = useState<RankInfo | null>(null);
     const [loading, setLoading] = useState(true);
     const cardRef = useRef<HTMLDivElement>(null);
+
 
     const getCurrentMagnitude = () => {
         const roles = user.roles || [];
@@ -179,6 +195,10 @@ export default function UserCard({ user, showDownload = true, compact = false }:
     const percentile = getPercentile();
     const achievements = getAchievements();
 
+    // Get theme color based on user's highest magnitude
+    const currentMag = getCurrentMagnitude();
+    const themeColor = MAGNITUDE_COLORS[Math.floor(currentMag)] || DEFAULT_THEME_COLOR;
+
     return (
         <div style={{ maxWidth: 600, margin: '0 auto' }}>
             <div
@@ -187,15 +207,16 @@ export default function UserCard({ user, showDownload = true, compact = false }:
                 className={`card ${compact ? 'user-card-compact' : 'user-card-main'}`}
                 style={{
                     padding: compact ? 16 : 24,
-                    backgroundColor: '#0e0e0e', // Explicit dark bg for PNG
-                    fontFamily: 'sans-serif', // Fallback font
-                    // Border is back by default from class "card"
+                    backgroundColor: `color-mix(in srgb, ${themeColor} 15%, #0a0a0a)`,
+                    fontFamily: 'sans-serif',
+                    border: `2px solid ${themeColor}80`,
+                    boxShadow: `0 0 30px ${themeColor}30, 0 0 60px ${themeColor}15`,
                 }}
             >
                 {/* User Header */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 24 }}>
                     <ElectricBorder
-                        color="#A6924D"
+                        color={themeColor}
                         speed={3}
                         chaos={0.06}
                         thickness={2}
@@ -242,9 +263,9 @@ export default function UserCard({ user, showDownload = true, compact = false }:
                         gap: 8,
                         marginBottom: 20,
                         padding: 12,
-                        background: 'var(--seismic-gray-900)',
+                        background: `color-mix(in srgb, ${themeColor} 10%, #151515)`,
                         borderRadius: 'var(--border-radius-sm)',
-                        border: '1px solid var(--seismic-gray-800)'
+                        border: `1px solid ${themeColor}30`
                     }}>
                         {achievements.map((ach, i) => (
                             <span
@@ -256,7 +277,6 @@ export default function UserCard({ user, showDownload = true, compact = false }:
                                     border: `1px solid ${ach.color}`,
                                     fontSize: '0.75rem',
                                     padding: '4px 10px',
-                                    // opacity: 0.9 removed to avoid text dimming
                                 }}
                             >
                                 {ach.label}
@@ -269,8 +289,9 @@ export default function UserCard({ user, showDownload = true, compact = false }:
                 <div className="grid-stats" style={{
                     marginBottom: 24,
                     padding: 20,
-                    background: 'var(--seismic-gray-800)',
+                    background: `color-mix(in srgb, ${themeColor} 10%, #151515)`,
                     borderRadius: 'var(--border-radius)',
+                    border: `1px solid ${themeColor}30`,
                 }}>
                     <div className="text-center">
                         <div className="stat-value text-primary">{user.total_messages.toLocaleString()}</div>
@@ -307,15 +328,17 @@ export default function UserCard({ user, showDownload = true, compact = false }:
                         textAlign: 'center',
                         padding: 16,
                         marginBottom: 24,
-                        background: 'linear-gradient(135deg, var(--seismic-primary-dark) 0%, var(--seismic-accent) 100%)',
+                        background: `linear-gradient(135deg, ${themeColor} 0%, ${themeColor}CC 50%, ${themeColor}99 100%)`,
                         borderRadius: 'var(--border-radius)',
-                        color: 'var(--seismic-white)'
+                        color: 'var(--seismic-white)',
+                        border: `1px solid ${themeColor}`,
+                        boxShadow: `0 4px 20px ${themeColor}50`
                     }}>
-                        <div style={{ fontSize: '0.875rem', opacity: 0.9, marginBottom: 4 }}>You are in the</div>
-                        <div style={{ fontSize: '1.75rem', fontWeight: 700, fontFamily: 'monospace' }}>
+                        <div style={{ fontSize: '0.875rem', opacity: 0.95, marginBottom: 4, textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>You are in the</div>
+                        <div style={{ fontSize: '1.75rem', fontWeight: 700, fontFamily: 'monospace', textShadow: '0 2px 4px rgba(0,0,0,0.4)' }}>
                             Top {(100 - parseFloat(percentile)).toFixed(2)}%
                         </div>
-                        <div style={{ fontSize: '0.8125rem', opacity: 0.8 }}>of all contributors</div>
+                        <div style={{ fontSize: '0.8125rem', opacity: 0.9, textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>of all contributors</div>
                     </div>
                 )}
 
@@ -324,9 +347,9 @@ export default function UserCard({ user, showDownload = true, compact = false }:
                     <div style={{
                         marginBottom: 24,
                         padding: 16,
-                        background: 'var(--seismic-gray-800)',
+                        background: `color-mix(in srgb, ${themeColor} 8%, #151515)`,
                         borderRadius: 'var(--border-radius)',
-                        border: '1px dashed var(--seismic-primary)'
+                        border: `1px dashed ${themeColor}`
                     }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, padding: '0 12px' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -370,27 +393,27 @@ export default function UserCard({ user, showDownload = true, compact = false }:
                     <>
                         {/* Activity Breakdown */}
                         <div style={{ marginBottom: 24 }}>
-                            <h4 style={{ marginBottom: 16 }}>Activity Breakdown</h4>
+                            <h4 style={{ marginBottom: 16, color: themeColor }}>Activity Breakdown</h4>
                             <div className="grid-activity">
-                                <div style={{ padding: 16, background: 'var(--seismic-gray-800)', borderRadius: 'var(--border-radius-sm)' }}>
+                                <div style={{ padding: 16, background: `color-mix(in srgb, ${themeColor} 8%, #151515)`, borderRadius: 'var(--border-radius-sm)', border: `1px solid ${themeColor}20` }}>
                                     <div className="text-muted" style={{ fontSize: '0.875rem', marginBottom: 4 }}>First Activity</div>
                                     <div className="font-medium" style={{ color: 'var(--seismic-white)' }}>
                                         {formatDate(user.first_message_date)}
                                     </div>
                                 </div>
-                                <div style={{ padding: 16, background: 'var(--seismic-gray-800)', borderRadius: 'var(--border-radius-sm)' }}>
+                                <div style={{ padding: 16, background: `color-mix(in srgb, ${themeColor} 8%, #151515)`, borderRadius: 'var(--border-radius-sm)', border: `1px solid ${themeColor}20` }}>
                                     <div className="text-muted" style={{ fontSize: '0.875rem', marginBottom: 4 }}>Last Activity</div>
                                     <div className="font-medium" style={{ color: 'var(--seismic-white)' }}>
                                         {formatDate(user.last_message_date)}
                                     </div>
                                 </div>
-                                <div style={{ padding: 16, background: 'var(--seismic-gray-800)', borderRadius: 'var(--border-radius-sm)' }}>
+                                <div style={{ padding: 16, background: `color-mix(in srgb, ${themeColor} 8%, #151515)`, borderRadius: 'var(--border-radius-sm)', border: `1px solid ${themeColor}20` }}>
                                     <div className="text-muted" style={{ fontSize: '0.875rem', marginBottom: 4 }}>Active Days</div>
                                     <div className="font-medium" style={{ color: 'var(--seismic-white)' }}>
                                         {activityDays ? `${activityDays} days` : 'N/A'}
                                     </div>
                                 </div>
-                                <div style={{ padding: 16, background: 'var(--seismic-gray-800)', borderRadius: 'var(--border-radius-sm)' }}>
+                                <div style={{ padding: 16, background: `color-mix(in srgb, ${themeColor} 8%, #151515)`, borderRadius: 'var(--border-radius-sm)', border: `1px solid ${themeColor}20` }}>
                                     <div className="text-muted" style={{ fontSize: '0.875rem', marginBottom: 4 }}>Avg. per Day</div>
                                     <div className="font-medium" style={{ color: 'var(--seismic-white)' }}>
                                         {messagesPerDay} per day
@@ -401,7 +424,7 @@ export default function UserCard({ user, showDownload = true, compact = false }:
 
                         {/* Contribution Breakdown Bar */}
                         <div style={{ marginBottom: 24 }}>
-                            <h4 style={{ marginBottom: 12 }}>Contribution Breakdown</h4>
+                            <h4 style={{ marginBottom: 12, color: themeColor }}>Contribution Breakdown</h4>
                             <div style={{
                                 display: 'flex',
                                 height: 12,
