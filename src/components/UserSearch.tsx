@@ -24,17 +24,47 @@ export default function UserSearch() {
         setSearched(true);
 
         try {
-            // Efficient search using indexed username column with ILIKE
-            const { data, error } = await supabase
-                .from('seismic_dc_user')
-                .select('*')
-                .ilike('username', `%${searchQuery}%`)
-                .eq('is_bot', false)
-                .order('total_messages', { ascending: false })
-                .limit(10);
+            // Clean up query - remove @ prefix if present
+            const cleanQuery = searchQuery.startsWith('@') ? searchQuery.slice(1) : searchQuery;
 
-            if (error) throw error;
-            setResults(data || []);
+            if (cleanQuery.length < 1) {
+                setResults([]);
+                setLoading(false);
+                return;
+            }
+
+            // Search both Discord username and X username in parallel
+            const [discordResult, xResult] = await Promise.all([
+                supabase
+                    .from('seismic_dc_user')
+                    .select('*')
+                    .ilike('username', `%${cleanQuery}%`)
+                    .eq('is_bot', false)
+                    .order('total_messages', { ascending: false })
+                    .limit(10),
+                supabase
+                    .from('seismic_dc_user')
+                    .select('*')
+                    .ilike('x_username', `%${cleanQuery}%`)
+                    .eq('is_bot', false)
+                    .order('total_messages', { ascending: false })
+                    .limit(10),
+            ]);
+
+            // Merge and deduplicate results
+            const allResults: SeismicUser[] = [...(discordResult.data || [])];
+            const existingIds = new Set(allResults.map(u => u.id));
+
+            ((xResult.data || []) as SeismicUser[]).forEach(user => {
+                if (!existingIds.has(user.id)) {
+                    allResults.push(user);
+                }
+            });
+
+            // Sort by total_messages descending
+            allResults.sort((a, b) => b.total_messages - a.total_messages);
+
+            setResults(allResults.slice(0, 10));
         } catch (error) {
             console.error('Search error:', error);
             setResults([]);
@@ -94,7 +124,7 @@ export default function UserSearch() {
                 <input
                     type="text"
                     className="search-input"
-                    placeholder="Enter Discord username..."
+                    placeholder="Search by Discord or X username..."
                     value={query}
                     onChange={handleInputChange}
                     autoComplete="off"
@@ -143,8 +173,14 @@ export default function UserSearch() {
                                 <div className="font-medium truncate" style={{ color: 'var(--seismic-white)' }}>
                                     {user.display_name || user.username}
                                 </div>
-                                <div className="text-muted" style={{ fontSize: '0.875rem' }}>
+                                <div className="text-muted" style={{ fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: 8 }}>
                                     @{user.username}
+                                    {user.x_username && (
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: 'var(--seismic-gray-500)' }}>
+                                            <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
+                                            @{user.x_username}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                             <div className="text-right">
