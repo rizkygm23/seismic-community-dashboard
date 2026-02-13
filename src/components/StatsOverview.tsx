@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { CommunityStats, RoleDistribution, RegionDistribution } from '@/types/database';
 import { getHighestRoleIcon, getRoleIconPath } from '@/lib/roleUtils';
 import EncryptedText from './EncryptedText';
-import TerminalLoader from './TerminalLoader';
+import { LoaderFive } from "@/components/ui/loader";
 import UserDetailModal from './UserDetailModal';
 
 // Defines extended user info for top contributors
@@ -28,6 +28,7 @@ export default function StatsOverview() {
     const [isEncrypted, setIsEncrypted] = useState(false);
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
     const [timeAgo, setTimeAgo] = useState('just now');
+    const [activeTab, setActiveTab] = useState<'overview' | 'roles' | 'regions'>('overview');
 
     // Timer to update 'timeAgo' display every minute
     useEffect(() => {
@@ -296,7 +297,11 @@ export default function StatsOverview() {
     }, []);
 
     if (loading) {
-        return <TerminalLoader />;
+        return (
+            <div className="flex justify-center py-20">
+                <LoaderFive text="Loading Statistics..." />
+            </div>
+        );
     }
 
     if (!stats) {
@@ -312,7 +317,8 @@ export default function StatsOverview() {
 
     return (
         <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+            {/* Header Bar */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
                 {/* Last Updated Indicator */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span className="relative flex h-2 w-2">
@@ -343,156 +349,175 @@ export default function StatsOverview() {
                 </button>
             </div>
 
-            {/* Main Stats Grid */}
-            <div className="grid-stats-cards" style={{ marginBottom: 32 }}>
-                <div className="card">
-                    <div className="stat-label">Active Users (30d)</div>
-                    <div className="stat-value"><EncryptedText text={stats.active_users_30d.toLocaleString()} enabled={isEncrypted} /></div>
-                    <div className="text-muted mt-2" style={{ fontSize: '0.8125rem' }}>
-                        <EncryptedText text={stats.active_users_7d.toLocaleString()} enabled={isEncrypted} /> active in 7d
-                    </div>
-                </div>
-
-                <div className="card">
-                    <div className="stat-label">Total Contributions</div>
-                    <div className="stat-value text-primary"><EncryptedText text={stats.total_messages.toLocaleString()} enabled={isEncrypted} /></div>
-                    <div className="text-muted mt-2" style={{ fontSize: '0.8125rem' }}>
-                        Tweet + Art combined
-                    </div>
-                </div>
-
-                <div className="card">
-                    <div className="stat-label">Tweet Contributions</div>
-                    <div className="stat-value text-secondary"><EncryptedText text={stats.tweet_messages.toLocaleString()} enabled={isEncrypted} /></div>
-                    <div className="text-muted mt-2" style={{ fontSize: '0.8125rem' }}>
-                        {stats.total_messages > 0
-                            ? <><EncryptedText text={((stats.tweet_messages / stats.total_messages) * 100).toFixed(1)} enabled={isEncrypted} />% of total</>
-                            : '0% of total'}
-                    </div>
-                </div>
-
-                <div className="card">
-                    <div className="stat-label">Art Contributions</div>
-                    <div className="stat-value text-accent"><EncryptedText text={stats.art_messages.toLocaleString()} enabled={isEncrypted} /></div>
-                    <div className="text-muted mt-2" style={{ fontSize: '0.8125rem' }}>
-                        {stats.total_messages > 0
-                            ? <><EncryptedText text={((stats.art_messages / stats.total_messages) * 100).toFixed(1)} enabled={isEncrypted} />% of total</>
-                            : '0% of total'}
-                    </div>
-                </div>
-
-
-
-
+            {/* Section Tabs */}
+            <div className="stats-tabs">
+                <button
+                    className={`stats-tab ${activeTab === 'overview' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('overview')}
+                >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18" /><path d="M18 17V9" /><path d="M13 17V5" /><path d="M8 17v-3" /></svg>
+                    Overview
+                </button>
+                <button
+                    className={`stats-tab ${activeTab === 'roles' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('roles')}
+                >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+                    Roles
+                </button>
+                <button
+                    className={`stats-tab ${activeTab === 'regions' ? 'active' : ''}`}
+                    onClick={() => setActiveTab('regions')}
+                >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>
+                    Regions
+                </button>
             </div>
 
-            {/* Two Column Layout */}
-            <div className="grid-stats-overview">
-                {/* Top Contributors */}
-                <div className="card">
-                    <div className="card-header">
-                        <h3 className="card-title">Top Contributors</h3>
+            {/* === OVERVIEW TAB === */}
+            {activeTab === 'overview' && (<>
+                {/* Main Stats Grid */}
+                <div className="grid-stats-cards" style={{ marginBottom: 32 }}>
+                    <div className="card">
+                        <div className="stat-label">Active Users (30d)</div>
+                        <div className="stat-value"><EncryptedText text={stats.active_users_30d.toLocaleString()} enabled={isEncrypted} /></div>
+                        <div className="text-muted mt-2" style={{ fontSize: '0.8125rem' }}>
+                            <EncryptedText text={stats.active_users_7d.toLocaleString()} enabled={isEncrypted} /> active in 7d
+                        </div>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        {topContributors.map((user, index) => {
-                            const roleIcon = getHighestRoleIcon(user.roles);
-                            return (
-                                <div
-                                    key={user.id}
-                                    onClick={() => setSelectedUser(user)}
-                                    style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 12,
-                                        cursor: 'pointer',
-                                    }}
-                                    className="hover-row" // Add global hover style if available or use inline
-                                >
-                                    <div className={`rank-badge ${index === 0 ? 'rank-1' : index === 1 ? 'rank-2' : index === 2 ? 'rank-3' : 'rank-default'}`}>
-                                        {index + 1}
-                                    </div>
-                                    <div style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', flexShrink: 0 }}>
-                                        {user.avatar_url ? (
-                                            <img
-                                                src={user.avatar_url}
-                                                alt={user.username}
-                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                            />
-                                        ) : (
-                                            <div style={{
-                                                width: '100%',
-                                                height: '100%',
-                                                background: 'var(--seismic-gray-700)',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                                fontSize: '0.75rem',
-                                                fontWeight: 600,
-                                                color: 'var(--seismic-white)'
-                                            }}>
-                                                {user.username[0].toUpperCase()}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                        <div className="font-medium truncate" style={{ color: 'var(--seismic-white)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                            <EncryptedText text={user.display_name || user.username} enabled={isEncrypted} />
-                                            {roleIcon && (
-                                                <img
-                                                    src={roleIcon}
-                                                    alt=""
-                                                    title="Highest Role"
-                                                    style={{ width: 14, height: 14, objectFit: 'contain' }}
-                                                />
-                                            )}
-                                        </div>
-                                        <div className="text-muted" style={{ fontSize: '0.75rem' }}>@<EncryptedText text={user.username} enabled={isEncrypted} /></div>
-                                    </div>
-                                    <div className="font-semibold text-primary">
-                                        <EncryptedText text={user.total.toLocaleString()} enabled={isEncrypted} />
-                                    </div>
-                                </div>
-                            );
-                        })}
+
+                    <div className="card">
+                        <div className="stat-label">Total Contributions</div>
+                        <div className="stat-value text-primary"><EncryptedText text={stats.total_messages.toLocaleString()} enabled={isEncrypted} /></div>
+                        <div className="text-muted mt-2" style={{ fontSize: '0.8125rem' }}>
+                            Tweet + Art combined
+                        </div>
                     </div>
+
+                    <div className="card">
+                        <div className="stat-label">Tweet Contributions</div>
+                        <div className="stat-value text-secondary"><EncryptedText text={stats.tweet_messages.toLocaleString()} enabled={isEncrypted} /></div>
+                        <div className="text-muted mt-2" style={{ fontSize: '0.8125rem' }}>
+                            {stats.total_messages > 0
+                                ? <><EncryptedText text={((stats.tweet_messages / stats.total_messages) * 100).toFixed(1)} enabled={isEncrypted} />% of total</>
+                                : '0% of total'}
+                        </div>
+                    </div>
+
+                    <div className="card">
+                        <div className="stat-label">Art Contributions</div>
+                        <div className="stat-value text-accent"><EncryptedText text={stats.art_messages.toLocaleString()} enabled={isEncrypted} /></div>
+                        <div className="text-muted mt-2" style={{ fontSize: '0.8125rem' }}>
+                            {stats.total_messages > 0
+                                ? <><EncryptedText text={((stats.art_messages / stats.total_messages) * 100).toFixed(1)} enabled={isEncrypted} />% of total</>
+                                : '0% of total'}
+                        </div>
+                    </div>
+
+
+
+
                 </div>
 
-                {/* Role Distribution */}
-                <div className="card">
+                {/* Two Column Layout */}
+                <div className="grid-stats-overview">
+                    {/* Top Contributors */}
+                    <div className="card">
+                        <div className="card-header">
+                            <h3 className="card-title">Top Contributors</h3>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            {topContributors.map((user, index) => {
+                                const roleIcon = getHighestRoleIcon(user.roles);
+                                return (
+                                    <div
+                                        key={user.id}
+                                        onClick={() => setSelectedUser(user)}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 12,
+                                            cursor: 'pointer',
+                                        }}
+                                        className="hover-row" // Add global hover style if available or use inline
+                                    >
+                                        <div className={`rank-badge ${index === 0 ? 'rank-1' : index === 1 ? 'rank-2' : index === 2 ? 'rank-3' : 'rank-default'}`}>
+                                            {index + 1}
+                                        </div>
+                                        <div style={{ width: 32, height: 32, borderRadius: '50%', overflow: 'hidden', flexShrink: 0 }}>
+                                            {user.avatar_url ? (
+                                                <img
+                                                    src={user.avatar_url}
+                                                    alt={user.username}
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                />
+                                            ) : (
+                                                <div style={{
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    background: 'var(--seismic-gray-700)',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    fontSize: '0.75rem',
+                                                    fontWeight: 600,
+                                                    color: 'var(--seismic-white)'
+                                                }}>
+                                                    {user.username[0].toUpperCase()}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div className="font-medium truncate" style={{ color: 'var(--seismic-white)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                <EncryptedText text={user.display_name || user.username} enabled={isEncrypted} />
+                                                {roleIcon && (
+                                                    <img
+                                                        src={roleIcon}
+                                                        alt=""
+                                                        title="Highest Role"
+                                                        style={{ width: 14, height: 14, objectFit: 'contain' }}
+                                                    />
+                                                )}
+                                            </div>
+                                            <div className="text-muted" style={{ fontSize: '0.75rem' }}>@<EncryptedText text={user.username} enabled={isEncrypted} /></div>
+                                        </div>
+                                        <div className="font-semibold text-primary">
+                                            <EncryptedText text={user.total.toLocaleString()} enabled={isEncrypted} />
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+
+                </div>
+            </>)}
+
+            {/* === ROLES TAB === */}
+            {activeTab === 'roles' && (<>
+                {/* Role Distribution - Full Width */}
+                <div className="card" style={{ marginBottom: 24 }}>
                     <div className="card-header">
                         <h3 className="card-title">Role Distribution</h3>
+                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>{roleStats.length} roles tracked</span>
                     </div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                         {(() => {
-                            const maxRoleCount = Math.max(...roleStats.map(r => r.user_count), 1);
+                            const maxCount = Math.max(...roleStats.map(r => r.user_count), 1);
                             return roleStats.map((role) => {
                                 const iconPath = getRoleIconPath(role.role_name);
-
                                 return (
                                     <div key={role.role_name}>
-                                        <div style={{
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            marginBottom: 4,
-                                            fontSize: '0.875rem'
-                                        }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: '0.875rem' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 6, maxWidth: '70%' }}>
-                                                {iconPath && (
-                                                    <img
-                                                        src={iconPath}
-                                                        alt=""
-                                                        style={{ width: 16, height: 16, objectFit: 'contain' }}
-                                                    />
-                                                )}
+                                                {iconPath && <img src={iconPath} alt="" style={{ width: 16, height: 16, objectFit: 'contain' }} />}
                                                 <span className="truncate">{role.role_name}</span>
                                             </div>
                                             <span className="text-muted"><EncryptedText text={role.user_count.toLocaleString()} enabled={isEncrypted} /></span>
                                         </div>
                                         <div className="progress-bar">
-                                            <div
-                                                className="progress-fill"
-                                                style={{ width: `${(role.user_count / maxRoleCount) * 100}%` }}
-                                            />
+                                            <div className="progress-fill" style={{ width: `${(role.user_count / maxCount) * 100}%` }} />
                                         </div>
                                     </div>
                                 );
@@ -500,151 +525,154 @@ export default function StatsOverview() {
                         })()}
                     </div>
                 </div>
-            </div>
+            </>)}
 
-            {/* Message Distribution */}
-            <div className="card" style={{ marginTop: 24 }}>
-                <div className="card-header">
-                    <h3 className="card-title">Contribution Distribution</h3>
-                </div>
-                <div style={{ display: 'flex', gap: 8, height: 40, borderRadius: 8, overflow: 'hidden' }}>
-                    <div
-                        style={{
-                            flex: stats.tweet_messages,
-                            background: 'var(--seismic-secondary)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            minWidth: stats.tweet_messages > 0 ? 60 : 0,
-                            fontSize: '0.875rem',
-                            fontWeight: 600,
-                            color: 'var(--seismic-black)',
-                        }}
-                    >
-                        {stats.total_messages > 0 && ((stats.tweet_messages / stats.total_messages) * 100).toFixed(0)}%
-                    </div>
-                    <div
-                        style={{
-                            flex: stats.art_messages,
-                            background: 'var(--seismic-accent)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            minWidth: stats.art_messages > 0 ? 60 : 0,
-                            fontSize: '0.875rem',
-                            fontWeight: 600,
-                            color: 'var(--seismic-black)',
-                        }}
-                    >
-                        {stats.total_messages > 0 && ((stats.art_messages / stats.total_messages) * 100).toFixed(0)}%
-                    </div>
-                    <div
-                        style={{
-                            flex: stats.total_messages - stats.tweet_messages - stats.art_messages,
-                            background: 'var(--seismic-gray-600)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            minWidth: 60,
-                            fontSize: '0.875rem',
-                            fontWeight: 600,
-                        }}
-                    >
-                        {stats.total_messages > 0 && (((stats.total_messages - stats.tweet_messages - stats.art_messages) / stats.total_messages) * 100).toFixed(0)}%
-                    </div>
-                </div>
-                <div style={{ display: 'flex', gap: 24, marginTop: 12, justifyContent: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--seismic-secondary)' }} />
-                        <span className="text-muted">Tweet</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--seismic-accent)' }} />
-                        <span className="text-muted">Art</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--seismic-gray-600)' }} />
-                        <span className="text-muted">Other</span>
-                    </div>
-                </div>
-            </div>
-
-            {/* Region Distribution */}
-            {regionStats.length > 0 && (
+            {/* === REGIONS TAB === */}
+            {activeTab === 'regions' && (<>
+                {/* Message Distribution */}
                 <div className="card" style={{ marginTop: 24 }}>
                     <div className="card-header">
-                        <h3 className="card-title">Region Distribution</h3>
-                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>
-                            {regionStats.length} regions • {regionStats.reduce((sum, r) => sum + r.user_count, 0).toLocaleString()} users
-                        </span>
+                        <h3 className="card-title">Contribution Distribution</h3>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        {(() => {
-                            const maxRegionCount = Math.max(...regionStats.map(r => r.user_count), 1);
-                            const totalRegionUsers = regionStats.reduce((sum, r) => sum + r.user_count, 0);
-
-                            return regionStats.slice(0, 15).map((region, index) => {
-                                const percentage = ((region.user_count / totalRegionUsers) * 100).toFixed(1);
-                                const avgContrib = region.user_count > 0 ? Math.round(region.total_contributions / region.user_count) : 0;
-
-                                // Use consistent seismic primary color
-                                const barColor = 'var(--seismic-primary)';
-
-                                return (
-                                    <div key={region.region}>
-                                        <div style={{
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            marginBottom: 4,
-                                            fontSize: '0.875rem'
-                                        }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                <span className="rank-badge rank-default" style={{
-                                                    minWidth: 24,
-                                                    height: 24,
-                                                    fontSize: '0.75rem',
-                                                    background: index < 3 ? barColor : undefined,
-                                                    color: index < 3 ? '#000' : undefined,
-                                                }}>
-                                                    {index + 1}
-                                                </span>
-                                                <span style={{ fontWeight: 500 }}>
-                                                    <EncryptedText text={region.region} enabled={isEncrypted} />
-                                                </span>
-                                            </div>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: '0.8125rem' }}>
-                                                <span className="text-muted">
-                                                    <EncryptedText text={region.user_count.toLocaleString()} enabled={isEncrypted} /> users
-                                                </span>
-                                                <span style={{ color: 'var(--seismic-primary)', fontWeight: 500 }}>
-                                                    {percentage}%
-                                                </span>
-                                                <span className="text-muted" title="Average contributions per user">
-                                                    ~<EncryptedText text={avgContrib.toLocaleString()} enabled={isEncrypted} />/user
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div className="progress-bar">
-                                            <div
-                                                className="progress-fill"
-                                                style={{
-                                                    width: `${(region.user_count / maxRegionCount) * 100}%`,
-                                                    background: barColor,
-                                                }}
-                                            />
-                                        </div>
-                                    </div>
-                                );
-                            });
-                        })()}
-                        {regionStats.length > 15 && (
-                            <div className="text-muted" style={{ textAlign: 'center', fontSize: '0.8125rem', paddingTop: 8 }}>
-                                + {regionStats.length - 15} more regions
-                            </div>
-                        )}
+                    <div style={{ display: 'flex', gap: 8, height: 40, borderRadius: 8, overflow: 'hidden' }}>
+                        <div
+                            style={{
+                                flex: stats.tweet_messages,
+                                background: 'var(--seismic-secondary)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                minWidth: stats.tweet_messages > 0 ? 60 : 0,
+                                fontSize: '0.875rem',
+                                fontWeight: 600,
+                                color: 'var(--seismic-black)',
+                            }}
+                        >
+                            {stats.total_messages > 0 && ((stats.tweet_messages / stats.total_messages) * 100).toFixed(0)}%
+                        </div>
+                        <div
+                            style={{
+                                flex: stats.art_messages,
+                                background: 'var(--seismic-accent)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                minWidth: stats.art_messages > 0 ? 60 : 0,
+                                fontSize: '0.875rem',
+                                fontWeight: 600,
+                                color: 'var(--seismic-black)',
+                            }}
+                        >
+                            {stats.total_messages > 0 && ((stats.art_messages / stats.total_messages) * 100).toFixed(0)}%
+                        </div>
+                        <div
+                            style={{
+                                flex: stats.total_messages - stats.tweet_messages - stats.art_messages,
+                                background: 'var(--seismic-gray-600)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                minWidth: 60,
+                                fontSize: '0.875rem',
+                                fontWeight: 600,
+                            }}
+                        >
+                            {stats.total_messages > 0 && (((stats.total_messages - stats.tweet_messages - stats.art_messages) / stats.total_messages) * 100).toFixed(0)}%
+                        </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 24, marginTop: 12, justifyContent: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--seismic-secondary)' }} />
+                            <span className="text-muted">Tweet</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--seismic-accent)' }} />
+                            <span className="text-muted">Art</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--seismic-gray-600)' }} />
+                            <span className="text-muted">Other</span>
+                        </div>
                     </div>
                 </div>
-            )}
+
+                {/* Region Distribution */}
+                {regionStats.length > 0 && (
+                    <div className="card" style={{ marginTop: 24 }}>
+                        <div className="card-header">
+                            <h3 className="card-title">Region Distribution</h3>
+                            <span className="text-muted" style={{ fontSize: '0.875rem' }}>
+                                {regionStats.length} regions • {regionStats.reduce((sum, r) => sum + r.user_count, 0).toLocaleString()} users
+                            </span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            {(() => {
+                                const maxRegionCount = Math.max(...regionStats.map(r => r.user_count), 1);
+                                const totalRegionUsers = regionStats.reduce((sum, r) => sum + r.user_count, 0);
+
+                                return regionStats.slice(0, 15).map((region, index) => {
+                                    const percentage = ((region.user_count / totalRegionUsers) * 100).toFixed(1);
+                                    const avgContrib = region.user_count > 0 ? Math.round(region.total_contributions / region.user_count) : 0;
+
+                                    // Use consistent seismic primary color
+                                    const barColor = 'var(--seismic-primary)';
+
+                                    return (
+                                        <div key={region.region}>
+                                            <div style={{
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                marginBottom: 4,
+                                                fontSize: '0.875rem'
+                                            }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                    <span className="rank-badge rank-default" style={{
+                                                        minWidth: 24,
+                                                        height: 24,
+                                                        fontSize: '0.75rem',
+                                                        background: index < 3 ? barColor : undefined,
+                                                        color: index < 3 ? '#000' : undefined,
+                                                    }}>
+                                                        {index + 1}
+                                                    </span>
+                                                    <span style={{ fontWeight: 500 }}>
+                                                        <EncryptedText text={region.region} enabled={isEncrypted} />
+                                                    </span>
+                                                </div>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: '0.8125rem' }}>
+                                                    <span className="text-muted">
+                                                        <EncryptedText text={region.user_count.toLocaleString()} enabled={isEncrypted} /> users
+                                                    </span>
+                                                    <span style={{ color: 'var(--seismic-primary)', fontWeight: 500 }}>
+                                                        {percentage}%
+                                                    </span>
+                                                    <span className="text-muted" title="Average contributions per user">
+                                                        ~<EncryptedText text={avgContrib.toLocaleString()} enabled={isEncrypted} />/user
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div className="progress-bar">
+                                                <div
+                                                    className="progress-fill"
+                                                    style={{
+                                                        width: `${(region.user_count / maxRegionCount) * 100}%`,
+                                                        background: barColor,
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+                                    );
+                                });
+                            })()}
+                            {regionStats.length > 15 && (
+                                <div className="text-muted" style={{ textAlign: 'center', fontSize: '0.8125rem', paddingTop: 8 }}>
+                                    + {regionStats.length - 15} more regions
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </>)}
 
             {/* User Detail Modal */}
             {selectedUser && (

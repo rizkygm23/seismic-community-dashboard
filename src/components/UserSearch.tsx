@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { SeismicUser } from '@/types/database';
 import UserCard from './UserCard';
+import { LoaderFive } from "@/components/ui/loader";
 
 export default function UserSearch() {
     const [query, setQuery] = useState('');
@@ -134,7 +135,7 @@ export default function UserSearch() {
             {/* Loading */}
             {loading && (
                 <div className="flex justify-center" style={{ padding: 24 }}>
-                    <div className="spinner" />
+                    <LoaderFive text="Searching..." />
                 </div>
             )}
 

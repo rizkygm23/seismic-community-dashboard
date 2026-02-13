@@ -1,127 +1,140 @@
+import { TypewriterEffect } from "@/components/ui/typewriter-effect";
 import UserSearch from '@/components/UserSearch';
+import HomeStats from '@/components/HomeStats';
+import { HomeBentoGrid, HomeBentoData } from '@/components/HomeBentoGrid';
+import { supabase } from '@/lib/supabase';
 
-export default function HomePage() {
+// Revalidate data every 60 seconds (ISR) to keep homepage fresh but performant
+export const revalidate = 60;
+
+export default async function HomePage() {
+  // Fetch data in parallel
+  const [leaderboardRes, statsRes, globalRes, promoRes, exploreRes] = await Promise.all([
+    // Leaderboard: Top 10 by total_messages (Art + Tweet)
+    supabase.from('seismic_dc_user').select('username, avatar_url, total_messages').order('total_messages', { ascending: false }).limit(10),
+
+    // Stats: RPC
+    supabase.rpc('get_community_stats'),
+
+    // Global: Fetch specific regions
+    supabase.from('seismic_dc_user').select('region').not('region', 'is', null).limit(2000),
+
+    // Promotion: Top 3 promoted users
+    supabase.from('seismic_dc_user').select('username, avatar_url, role_jumat').eq('is_promoted', true).order('role_jumat', { ascending: false }).limit(3),
+
+    // Explore: Count of users with roles (Magnitude 1-9, assuming role_jumat > 0)
+    supabase.from('seismic_dc_user').select('*', { count: 'exact', head: true }).gt('role_jumat', 0)
+  ]);
+
+  // --- Process Leaderboard ---
+  const leaderboard = ((leaderboardRes.data as any[]) || []).map(u => ({
+    username: u.username,
+    avatar_url: u.avatar_url,
+    score: u.total_messages
+  }));
+
+  // --- Process Stats ---
+  let totalContributions = 0;
+
+  if ((statsRes as any).data && ((statsRes as any).data as any).total_messages > 0) {
+    totalContributions = ((statsRes as any).data as any).total_messages;
+  } else {
+    // Fallback: Sum total_messages from top 1000 users if RPC fails
+    const { data: fallbackData } = await supabase
+      .from('seismic_dc_user')
+      .select('total_messages')
+      .order('total_messages', { ascending: false })
+      .limit(1000);
+
+    if (fallbackData) {
+      totalContributions = fallbackData.reduce((sum, row: any) => sum + (row.total_messages || 0), 0);
+    }
+  }
+
+  const stats = {
+    totalContributions,
+  };
+
+  // --- Process Global ---
+  const regionCounts: Record<string, number> = {};
+  ((globalRes.data as any[]) || []).forEach((row: any) => {
+    if (row.region) {
+      regionCounts[row.region] = (regionCounts[row.region] || 0) + 1;
+    }
+  });
+  const globalData = {
+    totalRegions: Object.keys(regionCounts).length,
+  };
+
+  // --- Process Explore ---
+  const explore = {
+    roleHolderCount: exploreRes.count || 0,
+  };
+
+  // --- Process Promotion ---
+  const promotedUsers = ((promoRes.data as any[]) || []).map((u: any) => ({
+    username: u.username,
+    avatar_url: u.avatar_url,
+    roleMagnitude: u.role_jumat
+  }));
+
+  const promotion = {
+    hasPromotion: promotedUsers.length > 0,
+    users: promotedUsers
+  };
+
+  const bentoData: HomeBentoData | any = {
+    leaderboard,
+    stats,
+    global: globalData,
+    explore,
+    promotion
+  };
+
   return (
     <div className="container" style={{ paddingTop: 80, paddingBottom: 80 }}>
       {/* Hero Section */}
-      <div className="text-center" style={{ marginBottom: 48 }}>
-        <h1 style={{
-          fontSize: '2.75rem',
-          fontWeight: 800,
-          marginBottom: 16,
-          letterSpacing: '-0.02em',
-        }}>
-          Seismic Community Dashboard
-        </h1>
-        <p className="text-muted" style={{ fontSize: '1.125rem', maxWidth: 500, margin: '0 auto' }}>
-          Look up your Discord username to see your contributions and rankings in the Seismic community
+      <div className="text-center" style={{ marginBottom: 48, position: 'relative' }}>
+        {/* Subtle glow behind hero */}
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: '500px',
+          height: '200px',
+          background: 'radial-gradient(circle, rgba(var(--seismic-primary-rgb), 0.12) 0%, rgba(0,0,0,0) 70%)',
+          zIndex: -1,
+          filter: 'blur(50px)',
+          pointerEvents: 'none',
+        }} />
+
+        <TypewriterEffect
+          words={[
+            { text: "Seismic", className: "text-[var(--seismic-primary)]" },
+            { text: "Community", className: "text-[var(--seismic-primary)]" },
+            { text: "Dashboard", className: "text-[var(--seismic-primary)]" }
+          ]}
+          className="mb-4"
+          cursorClassName="bg-[var(--seismic-primary)]"
+        />
+
+        <p className="text-muted" style={{ fontSize: '1.125rem', maxWidth: 520, margin: '0 auto' }}>
+          Look up your Discord or X username to see your contributions, rankings, and achievements in the Seismic community
         </p>
       </div>
 
+      {/* Live Community Counter */}
+      <HomeStats />
+
       {/* Search Component */}
-      <UserSearch />
+      <div style={{ marginTop: 40 }}>
+        <UserSearch />
+      </div>
 
-      {/* Quick Stats Preview */}
-      <div className="grid-home" style={{ marginTop: 80 }}>
-        <a href="/leaderboard" className="card group" style={{
-          textDecoration: 'none',
-          cursor: 'pointer',
-          transition: 'all var(--transition-normal)',
-          position: 'relative',
-        }}>
-          <h3 style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                background: 'var(--seismic-primary)'
-              }} />
-              Leaderboard
-            </div>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: 0.5 }}>
-              <path d="M5 12h14M12 5l7 7-7 7" />
-            </svg>
-          </h3>
-          <p className="text-muted" style={{ fontSize: '0.9375rem', paddingRight: 24 }}>
-            See the top contributors ranked by tweets, art, and overall activity
-          </p>
-        </a>
-
-        <a href="/leaderboard?type=tweet" className="card group" style={{
-          textDecoration: 'none',
-          cursor: 'pointer',
-          transition: 'all var(--transition-normal)',
-          position: 'relative',
-        }}>
-          <h3 style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                background: 'var(--seismic-secondary)'
-              }} />
-              Top Tweeters
-            </div>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: 0.5 }}>
-              <path d="M5 12h14M12 5l7 7-7 7" />
-            </svg>
-          </h3>
-          <p className="text-muted" style={{ fontSize: '0.9375rem', paddingRight: 24 }}>
-            Members who contributed the most in the tweet channel
-          </p>
-        </a>
-
-        <a href="/leaderboard?type=art" className="card group" style={{
-          textDecoration: 'none',
-          cursor: 'pointer',
-          transition: 'all var(--transition-normal)',
-          position: 'relative',
-        }}>
-          <h3 style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                background: 'var(--seismic-accent)'
-              }} />
-              Top Artists
-            </div>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: 0.5 }}>
-              <path d="M5 12h14M12 5l7 7-7 7" />
-            </svg>
-          </h3>
-          <p className="text-muted" style={{ fontSize: '0.9375rem', paddingRight: 24 }}>
-            Members who contributed the most in the art channel
-          </p>
-        </a>
-
-        <a href="/stats" className="card group" style={{
-          textDecoration: 'none',
-          cursor: 'pointer',
-          transition: 'all var(--transition-normal)',
-          position: 'relative',
-        }}>
-          <h3 style={{ marginBottom: 8, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{
-                width: 8,
-                height: 8,
-                borderRadius: '50%',
-                background: 'var(--seismic-gray-400)'
-              }} />
-              Statistics
-            </div>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ opacity: 0.5 }}>
-              <path d="M5 12h14M12 5l7 7-7 7" />
-            </svg>
-          </h3>
-          <p className="text-muted" style={{ fontSize: '0.9375rem', paddingRight: 24 }}>
-            Overview of community metrics and activity patterns
-          </p>
-        </a>
+      {/* Bento Grid Navigation */}
+      <div style={{ marginTop: 80 }}>
+        <HomeBentoGrid data={bentoData} />
       </div>
     </div>
   );

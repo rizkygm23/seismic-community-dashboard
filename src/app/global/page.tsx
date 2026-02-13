@@ -1,146 +1,101 @@
 'use client';
 
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect } from 'react';
+import dynamic from 'next/dynamic';
 import { supabase } from '@/lib/supabase';
-import {
-    ComposableMap,
-    Geographies,
-    Geography,
-    ZoomableGroup,
-} from 'react-simple-maps';
-import TerminalLoader from '@/components/TerminalLoader';
+import { LoaderFive } from "@/components/ui/loader";
+import { GlobeConfig } from '@/components/ui/globe';
+import { TypewriterEffect } from "@/components/ui/typewriter-effect";
 
-// World map topojson URL
-const geoUrl = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
+const World = dynamic(() => import('@/components/ui/globe').then((m) => m.World), {
+    ssr: false,
+});
 
-// Map region names to numeric country IDs (used by world-atlas)
-// These IDs correspond to ISO 3166-1 numeric codes
-const regionToCountryId: Record<string, string> = {
-    'Indonesian': '360',
-    'Nigerian': '566',
-    'Indian': '356',
-    'Vietnamese': '704',
-    'Russian': '643',
-    'Ukrainian': '804',
-    'Pakistani': '586',
-    'Turkish': '792',
-    'Bangladeshi': '050',
-    'Iranian': '364',
-    'French': '250',
-    'Thai': '764',
-    'Korean': '410',
-    'Egyptian': '818',
-    'Moroccan': '504',
-    'Brazilian': '076',
-    'Filipino': '608',
-    'Japanese': '392',
-    'Chinese': '156',
-    'American': '840',
-    'British': '826',
-    'German': '276',
-    'Spanish': '724',
-    'Italian': '380',
-    'Canadian': '124',
-    'Australian': '036',
-    'Mexican': '484',
-    'Polish': '616',
-    'Dutch': '528',
-    'Belgian': '056',
-    'Swedish': '752',
-    'Norwegian': '578',
-    'Danish': '208',
-    'Finnish': '246',
-    'Greek': '300',
-    'Portuguese': '620',
-    'Argentinian': '032',
-    'Colombian': '170',
-    'Chilean': '152',
-    'Peruvian': '604',
-    'Venezuelan': '862',
-    'Malaysian': '458',
-    'Singaporean': '702',
-    'South African': '710',
-    'Kenyan': '404',
-    'Ghanaian': '288',
-    'Saudi Arabian': '682',
-    'Emirati': '784',
-    'Israeli': '376',
-    'Czech': '203',
-    'Romanian': '642',
-    'Hungarian': '348',
-    'Swiss': '756',
-    'Austrian': '040',
-    'Irish': '372',
-    'New Zealander': '554',
-    'Algerian': '012',
-    'Tunisian': '788',
-    'Nepali': '524',
-    'Sri Lankan': '144',
+// Mapping for coordinates (Lat, Lng)
+const REGION_COORDINATES: Record<string, { lat: number; lng: number }> = {
+    'Indonesian': { lat: -0.7893, lng: 113.9213 },
+    'American': { lat: 37.0902, lng: -95.7129 },
+    'Indian': { lat: 20.5937, lng: 78.9629 },
+    'British': { lat: 55.3781, lng: -3.4360 },
+    'German': { lat: 51.1657, lng: 10.4515 },
+    'Japanese': { lat: 36.2048, lng: 138.2529 },
+    'Brazilian': { lat: -14.2350, lng: -51.9253 },
+    'Russian': { lat: 61.5240, lng: 105.3188 },
+    'Chinese': { lat: 35.8617, lng: 104.1954 },
+    'Canadian': { lat: 56.1304, lng: -106.3468 },
+    'Australian': { lat: -25.2744, lng: 133.7751 },
+    'French': { lat: 46.2276, lng: 2.2137 },
+    'Vietnamese': { lat: 14.0583, lng: 108.2772 },
+    'Nigerian': { lat: 9.0820, lng: 8.6753 },
+    'Ukrainian': { lat: 48.3794, lng: 31.1656 },
+    'Pakistani': { lat: 30.3753, lng: 69.3451 },
+    'Turkish': { lat: 38.9637, lng: 35.2433 },
+    'Bangladeshi': { lat: 23.6850, lng: 90.3563 },
+    'Iranian': { lat: 32.4279, lng: 53.6880 },
+    'Thai': { lat: 15.8700, lng: 100.9925 },
+    'Korean': { lat: 35.9078, lng: 127.7669 },
+    'Egyptian': { lat: 26.8206, lng: 30.8025 },
+    'Moroccan': { lat: 31.7917, lng: -7.0926 },
+    'Filipino': { lat: 12.8797, lng: 121.7740 },
+    'Spanish': { lat: 40.4637, lng: -3.7492 },
+    'Italian': { lat: 41.8719, lng: 12.5674 },
+    'Mexican': { lat: 23.6345, lng: -102.5528 },
+    'Polish': { lat: 51.9194, lng: 19.1451 },
+    'Dutch': { lat: 52.1326, lng: 5.2913 },
+    'Belgian': { lat: 50.5039, lng: 4.4699 },
+    'Swedish': { lat: 60.1282, lng: 18.6435 },
+    'Norwegian': { lat: 60.4720, lng: 8.4689 },
+    'Danish': { lat: 56.2639, lng: 9.5018 },
+    'Finnish': { lat: 61.9241, lng: 25.7482 },
+    'Greek': { lat: 39.0742, lng: 21.8243 },
+    'Portuguese': { lat: 39.3999, lng: -8.2245 },
+    'Argentinian': { lat: -38.4161, lng: -63.6167 },
+    'Colombian': { lat: 4.5709, lng: -74.2973 },
+    'Chilean': { lat: -35.6751, lng: -71.5430 },
+    'Peruvian': { lat: -9.1900, lng: -75.0152 },
+    'Venezuelan': { lat: 6.4238, lng: -66.5897 },
+    'Malaysian': { lat: 4.2105, lng: 101.9758 },
+    'Singaporean': { lat: 1.3521, lng: 103.8198 },
+    'South African': { lat: -30.5595, lng: 22.9375 },
+    'Kenyan': { lat: -0.0236, lng: 37.9062 },
+    'Ghanaian': { lat: 7.9465, lng: -1.0232 },
+    'Saudi Arabian': { lat: 23.8859, lng: 45.0792 },
+    'Emirati': { lat: 23.4241, lng: 53.8478 },
+    'Israeli': { lat: 31.0461, lng: 34.8516 },
+    'Czech': { lat: 49.8175, lng: 15.4730 },
+    'Romanian': { lat: 45.9432, lng: 24.9668 },
+    'Hungarian': { lat: 47.1625, lng: 19.5033 },
+    'Swiss': { lat: 46.8182, lng: 8.2275 },
+    'Austrian': { lat: 47.5162, lng: 14.5501 },
+    'Irish': { lat: 53.1424, lng: -7.6921 },
+    'New Zealander': { lat: -40.9006, lng: 174.8860 },
+    'Algerian': { lat: 28.0339, lng: 1.6596 },
+    'Tunisian': { lat: 33.8869, lng: 9.5375 },
+    'Nepali': { lat: 28.3949, lng: 84.1240 },
+    'Sri Lankan': { lat: 7.8731, lng: 80.7718 },
 };
 
-
-// Country ID to name (for tooltips) - uses numeric IDs
-const countryIdToName: Record<string, string> = {
-    '360': 'Indonesia',
-    '566': 'Nigeria',
-    '356': 'India',
-    '704': 'Vietnam',
-    '643': 'Russia',
-    '804': 'Ukraine',
-    '586': 'Pakistan',
-    '792': 'Turkey',
-    '050': 'Bangladesh',
-    '364': 'Iran',
-    '250': 'France',
-    '764': 'Thailand',
-    '410': 'South Korea',
-    '818': 'Egypt',
-    '504': 'Morocco',
-    '076': 'Brazil',
-    '608': 'Philippines',
-    '392': 'Japan',
-    '156': 'China',
-    '840': 'United States',
-    '826': 'United Kingdom',
-    '276': 'Germany',
-    '724': 'Spain',
-    '380': 'Italy',
-    '124': 'Canada',
-    '036': 'Australia',
-    '484': 'Mexico',
-    '616': 'Poland',
-    '528': 'Netherlands',
-    '056': 'Belgium',
-    '752': 'Sweden',
-    '578': 'Norway',
-    '208': 'Denmark',
-    '246': 'Finland',
-    '300': 'Greece',
-    '620': 'Portugal',
-    '032': 'Argentina',
-    '170': 'Colombia',
-    '152': 'Chile',
-    '604': 'Peru',
-    '862': 'Venezuela',
-    '458': 'Malaysia',
-    '702': 'Singapore',
-    '710': 'South Africa',
-    '404': 'Kenya',
-    '288': 'Ghana',
-    '682': 'Saudi Arabia',
-    '784': 'UAE',
-    '376': 'Israel',
-    '203': 'Czech Republic',
-    '642': 'Romania',
-    '348': 'Hungary',
-    '756': 'Switzerland',
-    '040': 'Austria',
-    '372': 'Ireland',
-    '554': 'New Zealand',
-    '012': 'Algeria',
-    '788': 'Tunisia',
-    '524': 'Nepal',
-    '144': 'Sri Lanka',
+const globeConfig: GlobeConfig = {
+    pointSize: 4,
+    globeColor: "#0a0a0a", // Dark background match
+    showAtmosphere: true,
+    atmosphereColor: "#ffffff",
+    atmosphereAltitude: 0.1,
+    emissive: "#1a1a1a",
+    emissiveIntensity: 0.1,
+    shininess: 0.9,
+    polygonColor: "rgba(255,255,255,0.7)",
+    ambientLight: "#38bdf8",
+    directionalLeftLight: "#ffffff",
+    directionalTopLight: "#ffffff",
+    pointLight: "#ffffff",
+    arcTime: 1000,
+    arcLength: 0.9,
+    rings: 1,
+    maxRings: 3,
+    initialPosition: { lat: 20, lng: 0 },
+    autoRotate: true,
+    autoRotateSpeed: 0.5,
 };
 
 interface RegionData {
@@ -149,20 +104,10 @@ interface RegionData {
     total_contributions: number;
 }
 
-interface TooltipData {
-    name: string;
-    users: number;
-    contributions: number;
-    x: number;
-    y: number;
-}
-
 export default function GlobalPage() {
     const [regionData, setRegionData] = useState<RegionData[]>([]);
-    const [countryData, setCountryData] = useState<Map<string, RegionData>>(new Map());
     const [loading, setLoading] = useState(true);
-    const [tooltip, setTooltip] = useState<TooltipData | null>(null);
-    const [position, setPosition] = useState({ coordinates: [0, 20] as [number, number], zoom: 1 });
+    const [globeArcs, setGlobeArcs] = useState<any[]>([]);
 
     useEffect(() => {
         async function fetchRegions() {
@@ -205,15 +150,64 @@ export default function GlobalPage() {
 
                 setRegionData(regions);
 
-                // Convert to country code map
-                const countryMap = new Map<string, RegionData>();
-                regions.forEach(r => {
-                    const code = regionToCountryId[r.region];
-                    if (code) {
-                        countryMap.set(code, r);
+                // Generate Arcs for Globe
+                const arcs: any[] = [];
+                const colors = ["#06b6d4", "#3b82f6", "#6366f1", "#8b5cf6", "#d946ef"];
+
+                // Filter regions that have coordinates
+                const validRegions = regions.filter(r => REGION_COORDINATES[r.region]);
+
+                // Limit to top 30 to keep performance good but show more data
+                const activeRegions = validRegions.slice(0, 30);
+
+                if (activeRegions.length > 1) {
+                    // Ensure every active region is connected at least once so it appears as a point
+                    activeRegions.forEach((startRegion, index) => {
+                        // Connect to a random other region
+                        let endRegion = activeRegions[Math.floor(Math.random() * activeRegions.length)];
+
+                        // Try to find a different region if we picked the same one
+                        if (endRegion.region === startRegion.region) {
+                            const otherRegions = activeRegions.filter(r => r.region !== startRegion.region);
+                            if (otherRegions.length > 0) {
+                                endRegion = otherRegions[Math.floor(Math.random() * otherRegions.length)];
+                            }
+                        }
+
+                        if (endRegion && endRegion.region !== startRegion.region) {
+                            arcs.push({
+                                order: index + 1,
+                                startLat: REGION_COORDINATES[startRegion.region].lat,
+                                startLng: REGION_COORDINATES[startRegion.region].lng,
+                                endLat: REGION_COORDINATES[endRegion.region].lat,
+                                endLng: REGION_COORDINATES[endRegion.region].lng,
+                                arcAlt: 0.1 + Math.random() * 0.3,
+                                color: colors[Math.floor(Math.random() * colors.length)],
+                            });
+                        }
+                    });
+
+                    // Add some extra random connections for density if needed
+                    for (let i = 0; i < 10; i++) {
+                        const start = activeRegions[Math.floor(Math.random() * activeRegions.length)];
+                        const end = activeRegions[Math.floor(Math.random() * activeRegions.length)];
+
+                        if (start.region !== end.region) {
+                            arcs.push({
+                                order: activeRegions.length + i + 1,
+                                startLat: REGION_COORDINATES[start.region].lat,
+                                startLng: REGION_COORDINATES[start.region].lng,
+                                endLat: REGION_COORDINATES[end.region].lat,
+                                endLng: REGION_COORDINATES[end.region].lng,
+                                arcAlt: 0.1 + Math.random() * 0.3,
+                                color: colors[Math.floor(Math.random() * colors.length)],
+                            });
+                        }
                     }
-                });
-                setCountryData(countryMap);
+                }
+
+                setGlobeArcs(arcs);
+
             } catch (err) {
                 console.error('Error fetching regions:', err);
             } finally {
@@ -224,38 +218,29 @@ export default function GlobalPage() {
         fetchRegions();
     }, []);
 
-    const getColor = (countryCode: string) => {
-        const data = countryData.get(countryCode);
-        if (!data) return '#1a1a1a';
-
-        const maxUsers = Math.max(...regionData.map(r => r.user_count), 1);
-        const intensity = Math.log(data.user_count + 1) / Math.log(maxUsers + 1);
-
-        // Gold gradient from dark to bright
-        // Base gold: 212, 175, 55
-        const r = Math.round(40 + intensity * (212 - 40));
-        const g = Math.round(40 + intensity * (175 - 40));
-        const b = Math.round(40 + intensity * (55 - 40));
-
-        return `rgb(${r}, ${g}, ${b})`;
-    };
-
-    const handleMoveEnd = (pos: { coordinates: [number, number]; zoom: number }) => {
-        setPosition(pos);
-    };
-
     const totalUsers = regionData.reduce((sum, r) => sum + r.user_count, 0);
     const totalContributions = regionData.reduce((sum, r) => sum + r.total_contributions, 0);
 
     if (loading) {
-        return <TerminalLoader />;
+        return (
+            <div className="flex justify-center py-20">
+                <LoaderFive text="Loading Global Data..." />
+            </div>
+        );
     }
 
     return (
         <div className="container" style={{ padding: '40px 20px', maxWidth: 1400 }}>
             {/* Header */}
             <div style={{ marginBottom: 32 }}>
-                <h1 style={{ marginBottom: 8 }}>Global Community</h1>
+                <TypewriterEffect
+                    words={[
+                        { text: "Global", className: "text-[var(--seismic-primary)]" },
+                        { text: "Community", className: "text-[var(--seismic-primary)]" },
+                    ]}
+                    className="mb-2 text-left"
+                    cursorClassName="bg-[var(--seismic-primary)]"
+                />
                 <p className="text-muted">
                     Visualizing the worldwide distribution of Seismic community members
                 </p>
@@ -284,158 +269,21 @@ export default function GlobalPage() {
                 </div>
             </div>
 
-            {/* Map Container */}
+            {/* Globe Container */}
             <div className="card" style={{
                 padding: 0,
                 overflow: 'hidden',
                 position: 'relative',
                 background: '#0a0a0a',
                 borderRadius: 16,
+                height: '600px', // Fixed height for globe
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center'
             }}>
-                {/* Tooltip */}
-                {tooltip && (
-                    <div style={{
-                        position: 'absolute',
-                        left: tooltip.x,
-                        top: tooltip.y,
-                        transform: 'translate(-50%, -120%)',
-                        background: 'rgba(0, 0, 0, 0.9)',
-                        border: '1px solid var(--seismic-primary)',
-                        borderRadius: 8,
-                        padding: '12px 16px',
-                        zIndex: 100,
-                        pointerEvents: 'none',
-                        minWidth: 150,
-                    }}>
-                        <div style={{ fontWeight: 600, marginBottom: 6, color: 'var(--seismic-primary)' }}>
-                            {tooltip.name}
-                        </div>
-                        <div style={{ fontSize: '0.875rem', color: 'var(--seismic-white)' }}>
-                            {tooltip.users.toLocaleString()} members
-                        </div>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--seismic-gray-400)' }}>
-                            {tooltip.contributions.toLocaleString()} contributions
-                        </div>
-                    </div>
-                )}
+                <World data={globeArcs} globeConfig={globeConfig} />
 
-                {/* Map */}
-                <ComposableMap
-                    projection="geoMercator"
-                    projectionConfig={{
-                        scale: 140,
-                        center: [0, 30],
-                    }}
-                    style={{
-                        width: '100%',
-                        height: 'auto',
-                        aspectRatio: '2 / 1',
-                    }}
-                >
-                    <ZoomableGroup
-                        center={position.coordinates}
-                        zoom={position.zoom}
-                        onMoveEnd={handleMoveEnd}
-                        minZoom={1}
-                        maxZoom={8}
-                    >
-                        <Geographies geography={geoUrl}>
-                            {({ geographies }) =>
-                                geographies.map((geo) => {
-                                    // Use geo.id for numeric code match, fallback to ISO_A3 if needed (though our map uses numeric)
-                                    const countryCode = geo.id || geo.properties.ISO_A3;
-                                    const data = countryData.get(countryCode);
-                                    const hasData = !!data;
-
-                                    return (
-                                        <Geography
-                                            key={geo.rsmKey}
-                                            geography={geo}
-                                            fill={getColor(countryCode)}
-                                            stroke={hasData ? '#D4AF37' : '#333'}
-                                            strokeWidth={hasData ? 1.5 : 0.5}
-                                            style={{
-                                                default: {
-                                                    outline: 'none',
-                                                    filter: hasData ? 'drop-shadow(0 0 8px rgba(212, 175, 55, 0.6))' : 'none',
-                                                },
-                                                hover: {
-                                                    fill: hasData ? 'var(--seismic-primary)' : '#2a2a2a',
-                                                    outline: 'none',
-                                                    cursor: hasData ? 'pointer' : 'default',
-                                                    filter: hasData ? 'drop-shadow(0 0 15px rgba(212, 175, 55, 0.9))' : 'none',
-                                                },
-                                                pressed: { outline: 'none' },
-                                            }}
-                                            onMouseEnter={(e) => {
-                                                if (data) {
-                                                    const rect = (e.target as Element).closest('svg')?.getBoundingClientRect();
-                                                    if (rect) {
-                                                        setTooltip({
-                                                            name: countryIdToName[countryCode] || geo.properties.name || countryCode,
-                                                            users: data.user_count,
-                                                            contributions: data.total_contributions,
-                                                            x: e.clientX - rect.left,
-                                                            y: e.clientY - rect.top,
-                                                        });
-                                                    }
-                                                }
-                                            }}
-                                            onMouseMove={(e) => {
-                                                if (data && tooltip) {
-                                                    const rect = (e.target as Element).closest('svg')?.getBoundingClientRect();
-                                                    if (rect) {
-                                                        setTooltip({
-                                                            ...tooltip,
-                                                            x: e.clientX - rect.left,
-                                                            y: e.clientY - rect.top,
-                                                        });
-                                                    }
-                                                }
-                                            }}
-                                            onMouseLeave={() => setTooltip(null)}
-                                        />
-                                    );
-                                })
-                            }
-                        </Geographies>
-                    </ZoomableGroup>
-                </ComposableMap>
-
-                {/* Zoom Controls */}
-                <div style={{
-                    position: 'absolute',
-                    bottom: 20,
-                    right: 20,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 8,
-                }}>
-                    <button
-                        className="btn btn-secondary"
-                        onClick={() => setPosition(p => ({ ...p, zoom: Math.min(p.zoom * 1.5, 8) }))}
-                        style={{ width: 40, height: 40, padding: 0, fontSize: '1.2rem' }}
-                    >
-                        +
-                    </button>
-                    <button
-                        className="btn btn-secondary"
-                        onClick={() => setPosition(p => ({ ...p, zoom: Math.max(p.zoom / 1.5, 1) }))}
-                        style={{ width: 40, height: 40, padding: 0, fontSize: '1.2rem' }}
-                    >
-                        −
-                    </button>
-                    <button
-                        className="btn btn-secondary"
-                        onClick={() => setPosition({ coordinates: [0, 20], zoom: 1 })}
-                        style={{ width: 40, height: 40, padding: 0, fontSize: '0.7rem' }}
-                        title="Reset view"
-                    >
-                        ↺
-                    </button>
-                </div>
-
-                {/* Legend */}
+                {/* Overlay Legend */}
                 <div style={{
                     position: 'absolute',
                     bottom: 20,
@@ -444,25 +292,10 @@ export default function GlobalPage() {
                     padding: '12px 16px',
                     borderRadius: 8,
                     border: '1px solid var(--seismic-gray-800)',
+                    zIndex: 10
                 }}>
-                    <div style={{ fontSize: '0.75rem', marginBottom: 8, color: 'var(--seismic-gray-400)' }}>
-                        Member Density
-                    </div>
-                    <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 8,
-                    }}>
-                        <div style={{
-                            width: 120,
-                            height: 12,
-                            borderRadius: 6,
-                            background: 'linear-gradient(to right, #1a1a1a 0%, #D4AF37 100%)',
-                        }} />
-                        <div style={{ display: 'flex', justifyContent: 'space-between', width: 120, marginTop: 4 }}>
-                            <span style={{ fontSize: '0.7rem', color: 'var(--seismic-gray-500)' }}>Low</span>
-                            <span style={{ fontSize: '0.7rem', color: 'var(--seismic-primary)' }}>High</span>
-                        </div>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--seismic-gray-400)' }}>
+                        Live Activity (Sampled)
                     </div>
                 </div>
             </div>
@@ -470,7 +303,7 @@ export default function GlobalPage() {
             {/* Top Regions List */}
             <div className="card" style={{ marginTop: 24 }}>
                 <div className="card-header">
-                    <h3 className="card-title">Top 10 Regions</h3>
+                    <h3 className="card-title">Top Regions</h3>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 12 }}>
                     {regionData.slice(0, 10).map((region, index) => (
@@ -508,28 +341,12 @@ export default function GlobalPage() {
                                 fontWeight: 600,
                                 color: 'var(--seismic-primary)',
                             }}>
-                                {((region.user_count / totalUsers) * 100).toFixed(1)}%
+                                {totalUsers > 0 ? ((region.user_count / totalUsers) * 100).toFixed(1) : 0}%
                             </div>
                         </div>
                     ))}
                 </div>
             </div>
-
-            {/* CSS for glow animation */}
-            <style jsx global>{`
-                @keyframes countryGlow {
-                    0%, 100% {
-                        filter: drop-shadow(0 0 6px rgba(212, 175, 55, 0.5));
-                    }
-                    50% {
-                        filter: drop-shadow(0 0 12px rgba(212, 175, 55, 0.8));
-                    }
-                }
-                
-                .country-active {
-                    animation: countryGlow 2s ease-in-out infinite;
-                }
-            `}</style>
         </div>
     );
 }

@@ -19,6 +19,7 @@ export default function Leaderboard({ initialType = 'combined' }: LeaderboardPro
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
     const [selectedUser, setSelectedUser] = useState<LeaderboardUser | null>(null);
+    const [searchQuery, setSearchQuery] = useState('');
     const limit = 25;
 
     const fetchLeaderboard = useCallback(async (reset = false) => {
@@ -127,10 +128,18 @@ export default function Leaderboard({ initialType = 'combined' }: LeaderboardPro
         return 'rank-default';
     };
 
+    // Filter users based on search
+    const filteredUsers = searchQuery.trim()
+        ? users.filter(u =>
+            u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (u.display_name && u.display_name.toLowerCase().includes(searchQuery.toLowerCase()))
+        )
+        : users;
+
     return (
         <div>
             {/* Tab Selector */}
-            <div className="tabs" style={{ marginBottom: 24 }}>
+            <div className="tabs" style={{ marginBottom: 16 }}>
                 <button
                     className={`tab ${type === 'combined' ? 'active' : ''}`}
                     onClick={() => setType('combined')}
@@ -151,6 +160,26 @@ export default function Leaderboard({ initialType = 'combined' }: LeaderboardPro
                 </button>
             </div>
 
+            {/* Search Filter */}
+            <div className="leaderboard-search">
+                <div style={{ position: 'relative', flex: 1 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--seismic-gray-500)' }}>
+                        <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                    <input
+                        type="text"
+                        className="input"
+                        placeholder="Find your rank..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        style={{ paddingLeft: 36, fontSize: '0.875rem' }}
+                    />
+                </div>
+                <span className="text-muted" style={{ fontSize: '0.8125rem', whiteSpace: 'nowrap' }}>
+                    {searchQuery ? `${filteredUsers.length} found` : `${users.length} loaded`}
+                </span>
+            </div>
+
             {/* Leaderboard Table */}
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
                 <div className="table-container">
@@ -169,14 +198,13 @@ export default function Leaderboard({ initialType = 'combined' }: LeaderboardPro
                             </tr>
                         </thead>
                         <tbody>
-                            {users.map((user) => {
+                            {filteredUsers.map((user) => {
                                 const roleIcon = getHighestRoleIcon(user.roles);
                                 return (
                                     <tr
                                         key={user.id}
                                         onClick={() => setSelectedUser(user)}
-                                        style={{ cursor: 'pointer' }}
-                                        className="hover-row"
+                                        className="row-clickable"
                                     >
                                         <td>
                                             <div className={`rank-badge ${getRankClass(user.rank!)}`}>

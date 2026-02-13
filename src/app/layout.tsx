@@ -21,7 +21,7 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <Navbar />
-        <main style={{ minHeight: 'calc(100vh - 72px)' }}>
+        <main style={{ minHeight: 'calc(100vh - 64px)' }}>
           {children}
         </main>
         <footer style={{

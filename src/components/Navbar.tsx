@@ -2,119 +2,175 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+
+const links = [
+    {
+        href: '/',
+        label: 'Search',
+        icon: (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+        ),
+    },
+    {
+        href: '/leaderboard',
+        label: 'Leaderboard',
+        icon: (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M8 21v-6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v6" />
+                <path d="M12 3v4" /><path d="M4 15v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" /><path d="M6 11l6-8 6 8" />
+            </svg>
+        ),
+    },
+    {
+        href: '/stats',
+        label: 'Statistics',
+        icon: (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 3v18h18" /><path d="M18 17V9" /><path d="M13 17V5" /><path d="M8 17v-3" />
+            </svg>
+        ),
+    },
+    {
+        href: '/global',
+        label: 'Global',
+        icon: (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" />
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+            </svg>
+        ),
+    },
+    {
+        href: '/explore',
+        label: 'Explore',
+        icon: (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" /><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+            </svg>
+        ),
+    },
+    {
+        href: '/compare',
+        label: 'Compare',
+        icon: (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M16 3h5v5" /><path d="M8 3H3v5" /><path d="M12 22v-8.3a4 4 0 0 0-1.172-2.872L3 3" /><path d="m15 9 6-6" />
+            </svg>
+        ),
+    },
+    {
+        href: '/promotion',
+        label: 'Promotion',
+        icon: (
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" /><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" /><path d="M4 22h16" />
+                <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
+                <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+                <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+            </svg>
+        ),
+    },
+];
 
 export default function Navbar() {
     const pathname = usePathname();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-    const links = [
-        { href: '/', label: 'Search' },
-        { href: '/leaderboard', label: 'Leaderboard' },
-        { href: '/stats', label: 'Statistics' },
-        { href: '/global', label: 'Global' },
-        { href: '/explore', label: 'Explore' },
-        { href: '/compare', label: 'Compare' },
-        { href: '/promotion', label: 'Promotion' },
-    ];
+    // Close mobile menu on route change
+    useEffect(() => {
+        setMobileMenuOpen(false);
+    }, [pathname]);
+
+    // Prevent body scroll when mobile menu is open
+    useEffect(() => {
+        if (mobileMenuOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => { document.body.style.overflow = ''; };
+    }, [mobileMenuOpen]);
 
     return (
-        <nav className="nav">
-            <div className="container nav-content">
-                <Link href="/" className="nav-brand">
-                    <img
-                        src="/logo/logoseismic.png"
-                        alt="Seismic Community"
-                        style={{
-                            width: 36,
-                            height: 36,
-                            objectFit: 'contain',
-                        }}
-                    />
-                    <span>Seismic Community</span>
-                </Link>
+        <>
+            <nav className="nav">
+                <div className="container nav-content">
+                    {/* Logo */}
+                    <Link href="/" className="nav-brand">
+                        <img
+                            src="/logo/logoseismic.png"
+                            alt="Seismic Community"
+                            style={{ height: 32, width: 32, borderRadius: 8 }}
+                        />
+                        <span className="nav-brand-text">Seismic Community</span>
+                    </Link>
 
-                {/* Desktop Navigation */}
-                <div className="nav-links">
-                    {links.map((link) => (
-                        <Link
-                            key={link.href}
-                            href={link.href}
-                            className={`nav-link ${pathname === link.href ? 'active' : ''}`}
-                        >
-                            {link.label}
-                        </Link>
-                    ))}
+                    {/* Desktop Navigation */}
+                    <div className="nav-links">
+                        {links.map((link) => {
+                            const isActive = pathname === link.href;
+                            return (
+                                <Link
+                                    key={link.href}
+                                    href={link.href}
+                                    className={`nav-link ${isActive ? 'active' : ''}`}
+                                >
+                                    <span className="nav-link-icon">{link.icon}</span>
+                                    {link.label}
+                                </Link>
+                            );
+                        })}
+                    </div>
+
+                    {/* Mobile Menu Button */}
+                    <button
+                        className="mobile-menu-btn"
+                        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                        aria-label="Toggle navigation menu"
+                    >
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            {mobileMenuOpen ? (
+                                <>
+                                    <path d="M18 6 6 18" />
+                                    <path d="m6 6 12 12" />
+                                </>
+                            ) : (
+                                <>
+                                    <path d="M4 12h16" />
+                                    <path d="M4 6h16" />
+                                    <path d="M4 18h16" />
+                                </>
+                            )}
+                        </svg>
+                    </button>
                 </div>
+            </nav>
 
-                {/* Mobile Menu Button */}
-                <button
-                    className="mobile-menu-btn"
-                    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                    aria-label="Toggle menu"
-                    style={{
-                        display: 'none',
-                        background: 'transparent',
-                        border: 'none',
-                        cursor: 'pointer',
-                        padding: 8,
-                        color: 'var(--seismic-gray-300)',
-                    }}
-                >
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        {mobileMenuOpen ? (
-                            <path d="M6 18L18 6M6 6l12 12" />
-                        ) : (
-                            <path d="M3 12h18M3 6h18M3 18h18" />
-                        )}
-                    </svg>
-                </button>
-            </div>
+            {/* Mobile Menu Overlay */}
+            <div className={`mobile-overlay ${mobileMenuOpen ? 'open' : ''}`} onClick={() => setMobileMenuOpen(false)} />
 
-            {/* Mobile Menu */}
-            {mobileMenuOpen && (
-                <div className="mobile-menu" style={{
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    right: 0,
-                    background: 'var(--seismic-dark)',
-                    borderBottom: '1px solid var(--seismic-gray-800)',
-                    padding: '16px 0',
-                    animation: 'fadeIn 0.2s ease',
-                }}>
-                    <div className="container">
-                        {links.map((link) => (
+            {/* Mobile Menu Slide-In */}
+            <div className={`mobile-menu ${mobileMenuOpen ? 'open' : ''}`}>
+                <div style={{ padding: '24px 0' }}>
+                    {links.map((link) => {
+                        const isActive = pathname === link.href;
+                        return (
                             <Link
                                 key={link.href}
                                 href={link.href}
+                                className={`mobile-menu-link ${isActive ? 'active' : ''}`}
                                 onClick={() => setMobileMenuOpen(false)}
-                                style={{
-                                    display: 'block',
-                                    padding: '12px 0',
-                                    fontSize: '1rem',
-                                    color: pathname === link.href ? 'var(--seismic-primary)' : 'var(--seismic-gray-300)',
-                                    fontWeight: pathname === link.href ? 600 : 400,
-                                    borderBottom: '1px solid var(--seismic-gray-800)',
-                                }}
                             >
+                                <span style={{ display: 'flex', alignItems: 'center' }}>{link.icon}</span>
                                 {link.label}
                             </Link>
-                        ))}
-                    </div>
+                        );
+                    })}
                 </div>
-            )}
-
-            <style jsx>{`
-                @media (max-width: 768px) {
-                    .nav-links {
-                        display: none !important;
-                    }
-                    .mobile-menu-btn {
-                        display: block !important;
-                    }
-                }
-            `}</style>
-        </nav>
+            </div>
+        </>
     );
 }

@@ -4,28 +4,15 @@ import { SeismicUser } from '@/types/database';
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getRoleIconPath, getHighestRoleIcon } from '@/lib/roleUtils';
+import { MAGNITUDE_COLORS, DEFAULT_THEME_COLOR } from '@/lib/constants';
+import UserCardImage from './UserCardImage';
 // @ts-ignore - Importing JS component
 import ElectricBorder from './ElectricBorder';
-
-// Magnitude color theme mapping
-const MAGNITUDE_COLORS: Record<number, string> = {
-    1: '#F9EC9E',
-    2: '#64CCA9',
-    3: '#30C82B',
-    4: '#79E20A',
-    5: '#8BA411',
-    6: '#C89A03',
-    7: '#955200',
-    8: '#C9442E',
-    9: '#00ADE0',
-};
-
-// Default color for users without magnitude
-const DEFAULT_THEME_COLOR = '#A6924D';
 
 interface UserCardProps {
     user: SeismicUser;
     showDownload?: boolean;
+    showProfileLink?: boolean;
     compact?: boolean;
 }
 
@@ -37,9 +24,10 @@ interface RankInfo {
     totalUsers: number;
 }
 
-export default function UserCard({ user, showDownload = true, compact = false }: UserCardProps) {
+export default function UserCard({ user, showDownload = true, showProfileLink = true, compact = false }: UserCardProps) {
     const [rankInfo, setRankInfo] = useState<RankInfo | null>(null);
     const [loading, setLoading] = useState(true);
+    const [showCardImage, setShowCardImage] = useState(false);
     const cardRef = useRef<HTMLDivElement>(null);
 
 
@@ -158,34 +146,62 @@ export default function UserCard({ user, showDownload = true, compact = false }:
     };
 
     const getAchievements = () => {
-        const achievements: { label: string; color: string }[] = [];
+        const achievements: { label: string; color: string; priority: number }[] = [];
+        const activityDays = (user.first_message_date && user.last_message_date)
+            ? Math.max(1, Math.ceil((new Date(user.last_message_date).getTime() - new Date(user.first_message_date).getTime()) / (1000 * 60 * 60 * 24)))
+            : 1;
 
-        if (user.first_message_date && new Date(user.first_message_date) < new Date('2024-06-01')) {
-            achievements.push({ label: 'Early Adopter', color: 'var(--seismic-primary)' });
-        }
+        // 1. Tenure
+        if (user.first_message_date && new Date(user.first_message_date) < new Date('2024-06-01'))
+            achievements.push({ label: 'Early Adopter', color: '#fff', priority: 5 });
 
-        if (activityDays && activityDays >= 30) {
-            achievements.push({ label: 'Consistent', color: '#ef4444' });
-        }
+        if (activityDays >= 90)
+            achievements.push({ label: 'Veteran', color: '#a3a3a3', priority: 3 });
+        else if (activityDays >= 30)
+            achievements.push({ label: 'Consistent', color: '#fff', priority: 2 });
 
-        if (user.total_messages > 0 && (user.art / user.total_messages) > 0.5) {
-            achievements.push({ label: 'Art Lover', color: 'var(--seismic-accent)' });
-        }
+        // 2. Volume
+        if (user.total_messages >= 5000)
+            achievements.push({ label: 'Relentless', color: '#ef4444', priority: 10 });
+        else if (user.total_messages >= 1000)
+            achievements.push({ label: 'Diamond', color: '#38bdf8', priority: 6 });
 
-        if (user.total_messages > 0 && (user.tweet / user.total_messages) > 0.5) {
-            achievements.push({ label: 'Tweet Master', color: 'var(--seismic-secondary)' });
-        }
+        // 3. Specialization
+        const artRatio = user.total_messages > 0 ? user.art / user.total_messages : 0;
+        const tweetRatio = user.total_messages > 0 ? user.tweet / user.total_messages : 0;
 
-        if (user.total_messages >= 1000) {
-            achievements.push({ label: 'Diamond Contributor', color: '#60a5fa' });
-        }
+        if (user.art >= 100)
+            achievements.push({ label: 'Artistic Soul', color: '#f472b6', priority: 4 });
 
-        if (rankInfo && (rankInfo.totalRank / rankInfo.totalUsers) <= 0.1) {
-            achievements.push({ label: 'Top 10%', color: '#fbbf24' });
-        }
+        if (user.tweet >= 500)
+            achievements.push({ label: 'Voice of Seismic', color: '#818cf8', priority: 4 });
 
-        return achievements;
+        if (user.total_messages > 200 && artRatio >= 0.4 && tweetRatio >= 0.4)
+            achievements.push({ label: 'Balanced Force', color: '#34d399', priority: 5 });
+
+        // 4. Rank
+        if (rankInfo && (rankInfo.totalRank / rankInfo.totalUsers) <= 0.01)
+            achievements.push({ label: 'Top 1% Elite', color: '#fbbf24', priority: 20 });
+        else if (rankInfo && (rankInfo.totalRank / rankInfo.totalUsers) <= 0.1)
+            achievements.push({ label: 'Top 10%', color: '#fbbf24', priority: 8 });
+
+        // 5. Momentum
+        const msgsPerDay = user.total_messages / activityDays;
+        if (msgsPerDay > 15)
+            achievements.push({ label: 'High Octane', color: '#f59e0b', priority: 7 });
+
+        // Rising Star
+        const joinedDays = user.joined_at
+            ? Math.ceil((new Date().getTime() - new Date(user.joined_at).getTime()) / (1000 * 60 * 60 * 24))
+            : activityDays;
+
+        if (joinedDays < 45 && user.total_messages > 300)
+            achievements.push({ label: 'Rising Star', color: '#facc15', priority: 9 });
+
+        return achievements.sort((a, b) => b.priority - a.priority).slice(0, 5);
     };
+
+
 
     const displayRoles = (user.roles || []).filter(
         role => !['[Left Server]', '[Not Fetched]', '[Bot]', 'No Roles'].includes(role)
@@ -214,7 +230,7 @@ export default function UserCard({ user, showDownload = true, compact = false }:
                 }}
             >
                 {/* User Header */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 24 }}>
+                <div className="user-card-header" style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
                     <ElectricBorder
                         color={themeColor}
                         speed={3}
@@ -265,18 +281,46 @@ export default function UserCard({ user, showDownload = true, compact = false }:
                                     {user.region}
                                 </div>
                             )}
+                            {showProfileLink && (
+                                <a
+                                    href={`/user/${user.username}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: 4,
+                                        fontSize: '0.75rem',
+                                        padding: '2px 8px',
+                                        background: 'rgba(255,255,255,0.06)',
+                                        border: '1px solid var(--seismic-gray-700)',
+                                        borderRadius: 'var(--border-radius-sm)',
+                                        color: 'var(--seismic-gray-400)',
+                                        textDecoration: 'none',
+                                        transition: 'all 0.2s',
+                                        cursor: 'pointer',
+                                    }}
+                                    title="Open shareable profile page"
+                                >
+                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                                    </svg>
+                                    Profile Link
+                                </a>
+                            )}
+
                         </div>
                     </div>
                 </div>
 
-                {/* Achievements - Fixed Colors */}
                 {achievements.length > 0 && (
                     <div style={{
                         display: 'flex',
                         flexWrap: 'wrap',
-                        gap: 8,
-                        marginBottom: 20,
-                        padding: 12,
+                        gap: 6,
+                        marginBottom: 16,
+                        padding: 10,
                         background: `color-mix(in srgb, ${themeColor} 10%, #151515)`,
                         borderRadius: 'var(--border-radius-sm)',
                         border: `1px solid ${themeColor}30`
@@ -286,11 +330,12 @@ export default function UserCard({ user, showDownload = true, compact = false }:
                                 key={i}
                                 className="badge"
                                 style={{
-                                    background: 'rgba(255, 255, 255, 0.05)',
+                                    backgroundColor: `${ach.color}15`,
                                     color: ach.color,
-                                    border: `1px solid ${ach.color}`,
+                                    border: `1px solid ${ach.color}30`,
                                     fontSize: '0.75rem',
                                     padding: '4px 10px',
+                                    fontWeight: 500
                                 }}
                             >
                                 {ach.label}
@@ -338,10 +383,10 @@ export default function UserCard({ user, showDownload = true, compact = false }:
 
                 {/* Percentile Banner */}
                 {!loading && percentile && (
-                    <div style={{
+                    <div className="percentile-banner" style={{
                         textAlign: 'center',
-                        padding: 16,
-                        marginBottom: 24,
+                        padding: 14,
+                        marginBottom: 16,
                         background: `linear-gradient(135deg, ${themeColor} 0%, ${themeColor}CC 50%, ${themeColor}99 100%)`,
                         borderRadius: 'var(--border-radius)',
                         color: 'var(--seismic-white)',
@@ -359,8 +404,8 @@ export default function UserCard({ user, showDownload = true, compact = false }:
                 {/* Next Magnitude Target - No Emoji - Hidden in compact mode */}
                 {!compact && nextMagInfo && (
                     <div style={{
-                        marginBottom: 24,
-                        padding: 16,
+                        marginBottom: 16,
+                        padding: 14,
                         background: `color-mix(in srgb, ${themeColor} 8%, #151515)`,
                         borderRadius: 'var(--border-radius)',
                         border: `1px dashed ${themeColor}`
@@ -372,7 +417,7 @@ export default function UserCard({ user, showDownload = true, compact = false }:
                                     <img
                                         src={getRoleIconPath(`Magnitude ${nextMagInfo.currentMagnitude}.0`)!}
                                         alt={`Magnitude ${nextMagInfo.currentMagnitude}`}
-                                        style={{ height: 48, width: 'auto', objectFit: 'contain' }}
+                                        style={{ height: 40, width: 'auto', objectFit: 'contain' }}
                                         crossOrigin="anonymous"
                                     />
                                 )}
@@ -389,7 +434,7 @@ export default function UserCard({ user, showDownload = true, compact = false }:
                                     <img
                                         src={getRoleIconPath(`Magnitude ${nextMagInfo.nextMagnitude}.0`)!}
                                         alt={`Magnitude ${nextMagInfo.nextMagnitude}`}
-                                        style={{ height: 48, width: 'auto', objectFit: 'contain', opacity: 0.6 }}
+                                        style={{ height: 40, width: 'auto', objectFit: 'contain', opacity: 0.6 }}
                                         crossOrigin="anonymous"
                                     />
                                 )}
@@ -406,8 +451,8 @@ export default function UserCard({ user, showDownload = true, compact = false }:
                 {!compact && (
                     <>
                         {/* Activity Breakdown */}
-                        <div style={{ marginBottom: 24 }}>
-                            <h4 style={{ marginBottom: 16, color: themeColor }}>Activity Breakdown</h4>
+                        <div style={{ marginBottom: 16 }}>
+                            <h4 style={{ marginBottom: 12, color: themeColor, fontSize: '1rem' }}>Activity Breakdown</h4>
                             <div className="grid-activity">
                                 <div style={{ padding: 16, background: `color-mix(in srgb, ${themeColor} 8%, #151515)`, borderRadius: 'var(--border-radius-sm)', border: `1px solid ${themeColor}20` }}>
                                     <div className="text-muted" style={{ fontSize: '0.875rem', marginBottom: 4 }}>First Activity</div>
@@ -437,8 +482,8 @@ export default function UserCard({ user, showDownload = true, compact = false }:
                         </div>
 
                         {/* Contribution Breakdown Bar */}
-                        <div style={{ marginBottom: 24 }}>
-                            <h4 style={{ marginBottom: 12, color: themeColor }}>Contribution Breakdown</h4>
+                        <div style={{ marginBottom: 16 }}>
+                            <h4 style={{ marginBottom: 10, color: themeColor, fontSize: '1rem' }}>Contribution Breakdown</h4>
                             <div style={{
                                 display: 'flex',
                                 height: 12,
@@ -513,8 +558,8 @@ export default function UserCard({ user, showDownload = true, compact = false }:
 
                 {/* Watermark for PNG - Hidden in compact mode */}
                 <div style={{
-                    marginTop: 20,
-                    paddingTop: 16,
+                    marginTop: 14,
+                    paddingTop: 12,
                     borderTop: '1px solid var(--seismic-gray-800)',
                     display: 'flex',
                     flexDirection: 'column',
@@ -542,6 +587,77 @@ export default function UserCard({ user, showDownload = true, compact = false }:
                     </div>
                 </div>
             </div>
+
+            {!loading && rankInfo && (
+                <div style={{ marginTop: 16, display: 'flex', justifyContent: 'center' }}>
+                    <button
+                        onClick={() => setShowCardImage(true)}
+                        style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 8,
+                            padding: '10px 20px',
+                            background: 'rgba(255,255,255,0.06)',
+                            border: '1px solid var(--seismic-gray-700)',
+                            borderRadius: '12px',
+                            color: 'var(--seismic-gray-300)',
+                            cursor: 'pointer',
+                            fontSize: '0.9rem',
+                            transition: 'all 0.2s',
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                        }}
+                        title="Generate shareable card image"
+                    >
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                            <circle cx="8.5" cy="8.5" r="1.5" />
+                            <polyline points="21 15 16 10 5 21" />
+                        </svg>
+                        Save as Image
+                    </button>
+                </div>
+            )}
+
+            {/* Card Image Modal */}
+            {showCardImage && (
+                <div
+                    className="modal-overlay"
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) setShowCardImage(false);
+                    }}
+                >
+                    <div style={{ maxWidth: 640, width: '100%', padding: '0 16px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+                            <button
+                                onClick={() => setShowCardImage(false)}
+                                style={{
+                                    background: 'rgba(0, 0, 0, 0.6)',
+                                    border: '1px solid var(--seismic-gray-700)',
+                                    borderRadius: '50%',
+                                    width: 32,
+                                    height: 32,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    color: 'var(--seismic-white)',
+                                    fontSize: 16,
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                ✕
+                            </button>
+                        </div>
+                        <UserCardImage user={user} rankInfo={rankInfo} />
+                    </div>
+                </div>
+            )}
         </div >
     );
 }

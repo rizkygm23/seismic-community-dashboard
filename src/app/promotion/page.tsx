@@ -3,22 +3,12 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { SeismicUser } from '@/types/database';
-import TerminalLoader from '@/components/TerminalLoader';
+import { LoaderFive } from "@/components/ui/loader";
 
 import { getHighestMagnitudeRole } from '@/lib/roleUtils';
+import { MAGNITUDE_COLORS } from '@/lib/constants';
 import ElectricBorder from '@/components/ElectricBorder';
-
-const MAGNITUDE_COLORS: Record<number, string> = {
-    1: '#F9EC9E',
-    2: '#64CCA9',
-    3: '#30C82B',
-    4: '#79E20A',
-    5: '#8BA411',
-    6: '#C89A03',
-    7: '#955200',
-    8: '#C9442E',
-    9: '#00ADE0',
-};
+import { TypewriterEffect } from "@/components/ui/typewriter-effect";
 
 export default function PromotionPage() {
     const [promotedUsers, setPromotedUsers] = useState<SeismicUser[]>([]);
@@ -64,7 +54,11 @@ export default function PromotionPage() {
     };
 
     if (loading) {
-        return <TerminalLoader />;
+        return (
+            <div className="flex justify-center py-20">
+                <LoaderFive text="Loading Promotions..." />
+            </div>
+        );
     }
 
     // Group users by integer part of role_jumat (Magnitude)
@@ -99,6 +93,18 @@ export default function PromotionPage() {
         .map(Number)
         .sort((a, b) => b - a);
 
+    // Filter Top 3 Efficient Climbers
+    // Criteria: Highest Role (Desc) -> Lowest Contributions (Asc)
+    const efficientClimbers = [...promotedUsers]
+        .sort((a, b) => {
+            const roleA = a.role_jumat || 0;
+            const roleB = b.role_jumat || 0;
+            const roleDiff = roleB - roleA;
+            if (roleDiff !== 0) return roleDiff;
+            return a.total_messages - b.total_messages;
+        })
+        .slice(0, 3);
+
     return (
         <div className="container" style={{ padding: '40px 20px', maxWidth: 1200 }}>
             {/* Header */}
@@ -115,21 +121,143 @@ export default function PromotionPage() {
                     filter: 'blur(40px)'
                 }} />
 
-                <h1 style={{
-                    fontSize: '3.5rem',
-                    fontWeight: 800,
-                    marginBottom: 16,
-                    background: 'linear-gradient(135deg, #fff 0%, #a5a5a5 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    letterSpacing: '-0.02em'
-                }}>
-                    Weekly Promotions
-                </h1>
+                <TypewriterEffect
+                    words={[
+                        { text: "Weekly", className: "text-[var(--seismic-primary)]" },
+                        { text: "Promotions", className: "text-[var(--seismic-primary)]" },
+                    ]}
+                    className="mb-4"
+                    cursorClassName="bg-[var(--seismic-primary)]"
+                />
                 <p className="text-muted" style={{ fontSize: '1.2rem', maxWidth: 600, margin: '0 auto', lineHeight: 1.6 }}>
                     Celebrating our standout community members who have leveled up their contribution magnitude this week.
                 </p>
             </div>
+
+            {/* Top Efficient Climbers Section */}
+            {efficientClimbers.length > 0 && (
+                <div style={{ marginBottom: 80 }}>
+                    <div style={{ textAlign: 'center', marginBottom: 40 }}>
+                        <h2 style={{
+                            fontSize: '2rem',
+                            fontWeight: 700,
+                            background: 'linear-gradient(135deg, #fff 0%, #a5a5a5 100%)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            marginBottom: 10,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 12
+                        }}>
+                            <span style={{ fontSize: '2.5rem' }}>🚀</span>
+                            Efficient Climbers
+                        </h2>
+                        <p className="text-muted">Achieved the highest roles with minimal total volume. True efficiency!</p>
+                    </div>
+
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                        gap: 24,
+                        maxWidth: 1000,
+                        margin: '0 auto'
+                    }}>
+                        {efficientClimbers.map((user, i) => {
+                            const magVal = user.role_jumat ? Math.floor(user.role_jumat) : 0;
+                            const color = MAGNITUDE_COLORS[magVal] || '#fff';
+
+                            return (
+                                <ElectricBorder
+                                    key={user.id}
+                                    color={color}
+                                    className="card !border-0"
+                                    borderRadius={16}
+                                    style={{ overflow: 'hidden', height: '100%' }}
+                                >
+                                    <div style={{
+                                        position: 'relative',
+                                        padding: '24px',
+                                        background: 'linear-gradient(180deg, rgba(255,255,255,0.03) 0%, rgba(0,0,0,0) 100%)',
+                                        height: '100%',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        textAlign: 'center'
+                                    }}>
+                                        {/* Rank Badge */}
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: 12,
+                                            right: 12,
+                                            background: i === 0 ? '#fbbf24' : '#94a3b8',
+                                            color: '#000',
+                                            fontWeight: 800,
+                                            width: 32,
+                                            height: 32,
+                                            borderRadius: '50%',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            fontSize: '1.2rem',
+                                            boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+                                        }}>
+                                            {i + 1}
+                                        </div>
+
+                                        <div className="avatar avatar-xl" style={{
+                                            marginBottom: 16,
+                                            width: 80,
+                                            height: 80,
+                                            border: `3px solid ${color}`
+                                        }}>
+                                            {user.avatar_url ? (
+                                                <img src={user.avatar_url} alt={user.username} crossOrigin="anonymous" />
+                                            ) : (
+                                                user.username[0].toUpperCase()
+                                            )}
+                                        </div>
+
+                                        <h3 style={{ fontSize: '1.4rem', marginBottom: 4 }}>
+                                            {user.display_name || user.username}
+                                        </h3>
+                                        <div className="text-muted" style={{ marginBottom: 20 }}>@{user.username}</div>
+
+                                        <div style={{
+                                            display: 'grid',
+                                            gridTemplateColumns: '1fr 1fr',
+                                            gap: 12,
+                                            width: '100%'
+                                        }}>
+                                            <div style={{
+                                                background: 'rgba(255,255,255,0.03)',
+                                                padding: '12px',
+                                                borderRadius: 12,
+                                                border: `1px solid ${color}30`
+                                            }}>
+                                                <div style={{ fontSize: '0.8rem', color: 'var(--seismic-gray-400)', marginBottom: 4 }}>Role</div>
+                                                <div style={{ fontSize: '1.2rem', fontWeight: 700, color: color }}>
+                                                    Mag {magVal}
+                                                </div>
+                                            </div>
+                                            <div style={{
+                                                background: 'rgba(255,255,255,0.03)',
+                                                padding: '12px',
+                                                borderRadius: 12,
+                                                border: '1px solid var(--seismic-gray-700)'
+                                            }}>
+                                                <div style={{ fontSize: '0.8rem', color: 'var(--seismic-gray-400)', marginBottom: 4 }}>Contributions</div>
+                                                <div style={{ fontSize: '1.2rem', fontWeight: 700, color: '#fff' }}>
+                                                    {user.total_messages.toLocaleString()}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </ElectricBorder>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             {/* Empty State */}
             {promotedUsers.length === 0 ? (

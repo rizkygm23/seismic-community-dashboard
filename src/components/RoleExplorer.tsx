@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { RoleDistribution, LeaderboardUser } from '@/types/database';
 import { getHighestRoleIcon, getRoleIconPath } from '@/lib/roleUtils';
 import UserDetailModal from './UserDetailModal';
+import { LoaderFive } from "@/components/ui/loader";
 
 export default function RoleExplorer() {
     const [roles, setRoles] = useState<RoleDistribution[]>([]);
@@ -210,7 +211,7 @@ export default function RoleExplorer() {
     if (loading) {
         return (
             <div className="flex justify-center" style={{ padding: 40 }}>
-                <div className="spinner" />
+                <LoaderFive text="Loading Roles..." />
             </div>
         );
     }
@@ -272,7 +273,7 @@ export default function RoleExplorer() {
 
                     {membersLoading ? (
                         <div className="flex justify-center" style={{ padding: 24 }}>
-                            <div className="spinner" />
+                            <LoaderFive text="Loading Members..." />
                         </div>
                     ) : roleMembers.length > 0 ? (
                         <div style={{ display: 'grid', gap: 12 }}>
