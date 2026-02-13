@@ -136,7 +136,13 @@ const LeaderboardVisual = ({ data }: { data: HomeBentoData['leaderboard'] }) => 
     return (
         <div className="flex flex-1 w-full h-full min-h-[6rem] bg-neutral-900 border border-neutral-800 rounded-lg p-4 flex-col items-center justify-center relative overflow-hidden">
             <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-neutral-900/50 pointer-events-none z-10" />
-            <div className="flex flex-row items-center justify-center w-full">
+            {/* Mobile View: Show only top 3 */}
+            <div className="flex md:hidden flex-row items-center justify-center w-full">
+                <AnimatedTooltip items={tooltipItems.slice(0, 3)} />
+            </div>
+
+            {/* Desktop View: Show all */}
+            <div className="hidden md:flex flex-row items-center justify-center w-full">
                 <AnimatedTooltip items={tooltipItems} />
             </div>
         </div>

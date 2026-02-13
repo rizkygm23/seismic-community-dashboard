@@ -149,7 +149,7 @@ export default function PromotionPage() {
                             alignItems: 'center',
                             gap: 12
                         }}>
-                            <span style={{ fontSize: '2.5rem' }}>🚀</span>
+
                             Efficient Climbers
                         </h2>
                         <p className="text-muted">Achieved the highest roles with minimal total volume. True efficiency!</p>
