@@ -7,7 +7,7 @@ import { LoaderFive } from "@/components/ui/loader";
 
 import { getHighestMagnitudeRole } from '@/lib/roleUtils';
 import { MAGNITUDE_COLORS } from '@/lib/constants';
-import ElectricBorder from '@/components/ElectricBorder';
+
 import { TypewriterEffect } from "@/components/ui/typewriter-effect";
 
 export default function PromotionPage() {
@@ -167,13 +167,25 @@ export default function PromotionPage() {
                             const color = MAGNITUDE_COLORS[magVal] || '#fff';
 
                             return (
-                                <ElectricBorder
+                                <div
                                     key={user.id}
-                                    color={color}
-                                    className="card !border-0"
-                                    borderRadius={16}
-                                    style={{ overflow: 'hidden', height: '100%' }}
+                                    className="card group relative"
+                                    style={{
+                                        overflow: 'hidden',
+                                        height: '100%',
+                                        border: `1px solid ${color}40`,
+                                        borderRadius: 16,
+                                        boxShadow: `0 8px 32px ${color}10`,
+                                        transition: 'all 0.3s ease',
+                                        position: 'relative'
+                                    }}
                                 >
+                                    <div
+                                        className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-500 pointer-events-none"
+                                        style={{
+                                            background: `radial-gradient(circle at center, ${color}, transparent 70%)`
+                                        }}
+                                    />
                                     <div style={{
                                         position: 'relative',
                                         padding: '24px',
@@ -252,7 +264,7 @@ export default function PromotionPage() {
                                             </div>
                                         </div>
                                     </div>
-                                </ElectricBorder>
+                                </div>
                             );
                         })}
                     </div>
@@ -323,19 +335,28 @@ export default function PromotionPage() {
 
                             <div className="grid-promotion">
                                 {groupedUsers[mag].map((user, index) => (
-                                    <ElectricBorder
+                                    <div
                                         key={user.id}
-                                        color={MAGNITUDE_COLORS[mag] || '#D4BB6E'}
-                                        className="card !border-0"
-                                        borderRadius={16}
+                                        className="card group relative"
                                         style={{
                                             padding: 0,
                                             overflow: 'hidden',
+                                            border: `1px solid ${(MAGNITUDE_COLORS[mag] || '#D4BB6E')}40`,
+                                            borderRadius: 16,
+                                            boxShadow: `0 4px 24px ${(MAGNITUDE_COLORS[mag] || '#D4BB6E')}10`,
                                             animation: `fadeIn 0.5s ease-out forwards ${index * 0.1}s`,
                                             opacity: 0,
                                             transform: 'translateY(20px)',
+                                            transition: 'all 0.3s ease',
+                                            position: 'relative'
                                         }}
                                     >
+                                        <div
+                                            className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity duration-500 pointer-events-none"
+                                            style={{
+                                                background: `radial-gradient(circle at center, ${(MAGNITUDE_COLORS[mag] || '#D4BB6E')}, transparent 70%)`
+                                            }}
+                                        />
                                         {/* Banner/Header of Card */}
                                         <div style={{
                                             background: 'linear-gradient(135deg, rgba(var(--seismic-primary-rgb), 0.08) 0%, rgba(var(--seismic-accent-rgb), 0.08) 100%)',
@@ -377,7 +398,7 @@ export default function PromotionPage() {
                                                 </div>
                                             </div>
                                         </div>
-                                    </ElectricBorder>
+                                    </div>
                                 ))}
                             </div>
                         </div>
