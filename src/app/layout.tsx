@@ -19,6 +19,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <script defer
+          data-site-id="seismic.rizzgm.xyz"
+          src="https://datrica.live/analytics.js">
+        </script>
+      </head>
       <body>
         <Navbar />
         <main style={{ minHeight: 'calc(100vh - 64px)' }}>
