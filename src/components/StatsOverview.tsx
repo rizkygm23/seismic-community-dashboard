@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { CommunityStats, RoleDistribution, RegionDistribution } from '@/types/database';
+import { CommunityStats, RoleDistribution, RegionDistribution, SeismicStatsSnapshot } from '@/types/database_manual';
 import { getHighestRoleIcon, getRoleIconPath } from '@/lib/roleUtils';
 import EncryptedText from './EncryptedText';
 import { LoaderFive } from "@/components/ui/loader";
@@ -28,7 +28,7 @@ export default function StatsOverview() {
     const [isEncrypted, setIsEncrypted] = useState(false);
     const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
     const [timeAgo, setTimeAgo] = useState('just now');
-    const [activeTab, setActiveTab] = useState<'overview' | 'roles' | 'regions'>('overview');
+    const [activeTab, setActiveTab] = useState<'overview' | 'regions'>('overview');
 
     // Timer to update 'timeAgo' display every minute
     useEffect(() => {
@@ -58,31 +58,22 @@ export default function StatsOverview() {
         async function fetchStats() {
             setLoading(true);
             try {
-                // Fetch all stats in parallel for efficiency
-                const [statsResult, topResult, active7dResult, active30dResult, verifiedCount, leaderCount, latestUpdateResult] = await Promise.all([
-                    // Main stats using aggregate functions
-                    supabase.rpc('get_community_stats'),
+                // Fetch latest snapshot and top contributors in parallel
+                const [snapshotResult, topResult, verifiedCount, leaderCount] = await Promise.all([
+                    supabase.from('seismic_stats_snapshot')
+                        .select('*')
+                        .order('created_at', { ascending: false })
+                        .limit(1)
+                        .single(),
 
-                    // Top 5 contributors
+                    // Top 5 contributors (still live)
                     supabase.from('seismic_dc_user')
                         .select('id, username, display_name, avatar_url, roles, total_messages')
                         .eq('is_bot', false)
                         .order('total_messages', { ascending: false })
                         .limit(5),
 
-                    // Active users in last 7 days
-                    supabase.from('seismic_dc_user')
-                        .select('id', { count: 'exact', head: true })
-                        .eq('is_bot', false)
-                        .gte('last_message_date', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()),
-
-                    // Active users in last 30 days
-                    supabase.from('seismic_dc_user')
-                        .select('id', { count: 'exact', head: true })
-                        .eq('is_bot', false)
-                        .gte('last_message_date', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
-
-                    // Direct count for Verified role
+                    // Direct count for Verified role (optional, could be moved to worker but quick enough)
                     supabase.from('seismic_dc_user')
                         .select('id', { count: 'exact', head: true })
                         .eq('is_bot', false)
@@ -92,184 +83,55 @@ export default function StatsOverview() {
                         .select('id', { count: 'exact', head: true })
                         .eq('is_bot', false)
                         .contains('roles', ['Leader']),
-
-                    // Latest update timestamp
-                    supabase.from('seismic_dc_user')
-                        .select('updated_at')
-                        .order('updated_at', { ascending: false })
-                        .limit(1)
-                        .single(),
                 ]);
 
-                // Fetch all user roles in batches for Magnitude processing
-                // Supabase default limit is 1000, so we need to paginate
-                const allRolesData: { roles: string[] | null }[] = [];
-                const batchSize = 1000;
-                let offset = 0;
-                let hasMore = true;
+                // Supabase typings can be noisy here, so we cast to the known snapshot shape
+                const snapshotData = (snapshotResult as any)?.data as SeismicStatsSnapshot | null;
 
-                while (hasMore) {
-                    const { data: batch } = await supabase
-                        .from('seismic_dc_user')
-                        .select('roles')
-                        .eq('is_bot', false)
-                        .not('roles', 'is', null)
-                        .range(offset, offset + batchSize - 1);
-
-                    if (batch && batch.length > 0) {
-                        allRolesData.push(...batch);
-                        offset += batchSize;
-                        hasMore = batch.length === batchSize;
-                    } else {
-                        hasMore = false;
-                    }
-                }
-
-                // Process role distribution - only count highest magnitude for each user
-                const roleMap = new Map<string, number>();
-                const magnitudePattern = /^Magnitude (\d+\.?\d*)$/;
-
-                allRolesData.forEach((row) => {
-                    const userRoles = row.roles || [];
-
-                    // Find highest magnitude for this user
-                    let highestMagnitude: number | null = null;
-                    let highestMagnitudeRole: string | null = null;
-
-                    userRoles.forEach((role) => {
-                        const match = role.match(magnitudePattern);
-                        if (match) {
-                            const magValue = parseFloat(match[1]);
-                            if (highestMagnitude === null || magValue > highestMagnitude) {
-                                highestMagnitude = magValue;
-                                highestMagnitudeRole = role;
-                            }
-                        }
-                    });
-
-                    // Only count highest magnitude role
-                    if (highestMagnitudeRole) {
-                        roleMap.set(highestMagnitudeRole, (roleMap.get(highestMagnitudeRole) || 0) + 1);
-                    }
-                });
-
-                // Add Verified and Leader with accurate counts from database
-                if (verifiedCount.count && verifiedCount.count > 0) {
-                    roleMap.set('Verified', verifiedCount.count);
-                }
-                if (leaderCount.count && leaderCount.count > 0) {
-                    roleMap.set('Leader', leaderCount.count);
-                }
-
-                const sortedRoles = Array.from(roleMap.entries())
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([role_name, user_count]) => ({ role_name, user_count }));
-
-                setRoleStats(sortedRoles);
-
-                // Fetch region statistics
-                const regionMap = new Map<string, { user_count: number; total_contributions: number }>();
-                let regionOffset = 0;
-                let hasMoreRegions = true;
-
-                while (hasMoreRegions) {
-                    const { data: regionBatch } = await supabase
-                        .from('seismic_dc_user')
-                        .select('region, total_messages')
-                        .eq('is_bot', false)
-                        .not('region', 'is', null)
-                        .range(regionOffset, regionOffset + batchSize - 1);
-
-                    if (regionBatch && regionBatch.length > 0) {
-                        regionBatch.forEach((row: { region: string | null; total_messages: number }) => {
-                            if (row.region) {
-                                const existing = regionMap.get(row.region) || { user_count: 0, total_contributions: 0 };
-                                existing.user_count += 1;
-                                existing.total_contributions += row.total_messages || 0;
-                                regionMap.set(row.region, existing);
-                            }
-                        });
-                        regionOffset += batchSize;
-                        hasMoreRegions = regionBatch.length === batchSize;
-                    } else {
-                        hasMoreRegions = false;
-                    }
-                }
-
-                const sortedRegions = Array.from(regionMap.entries())
-                    .sort((a, b) => b[1].user_count - a[1].user_count)
-                    .map(([region, data]) => ({
-                        region,
-                        user_count: data.user_count,
-                        total_contributions: data.total_contributions,
-                    }));
-
-                setRegionStats(sortedRegions);
-
-                // Get basic stats if RPC doesn't exist, use fallback
-                if (statsResult.error) {
-                    // Fallback: fetch counts manually
-                    const [totalCount, humanCount, botCount] = await Promise.all([
-                        supabase.from('seismic_dc_user').select('id', { count: 'exact', head: true }),
-                        supabase.from('seismic_dc_user').select('id', { count: 'exact', head: true }).eq('is_bot', false),
-                        supabase.from('seismic_dc_user').select('id', { count: 'exact', head: true }).eq('is_bot', true),
-                    ]);
-
-                    // Fetch all users in batches to calculate sums correctly
-                    // Supabase default limit is 1000, so we need to paginate
-                    let totalMsg = 0, tweetMsg = 0, artMsg = 0;
-                    let activeUsers = 0;
-                    const batchSize = 1000;
-                    let offset = 0;
-                    let hasMore = true;
-
-                    while (hasMore) {
-                        const { data: batch } = await supabase
-                            .from('seismic_dc_user')
-                            .select('total_messages, tweet, art')
-                            .eq('is_bot', false)
-                            .range(offset, offset + batchSize - 1);
-
-                        if (batch && batch.length > 0) {
-                            batch.forEach((row: { total_messages: number; tweet: number; art: number }) => {
-                                totalMsg += row.total_messages || 0;
-                                tweetMsg += row.tweet || 0;
-                                artMsg += row.art || 0;
-                                if (row.total_messages > 0) activeUsers++;
-                            });
-                            offset += batchSize;
-                            hasMore = batch.length === batchSize;
-                        } else {
-                            hasMore = false;
-                        }
-                    }
-
+                if (snapshotData) {
+                    const snap = snapshotData;
                     setStats({
-                        total_users: totalCount.count || 0,
-                        human_users: humanCount.count || 0,
-                        bot_users: botCount.count || 0,
-                        total_messages: totalMsg,
-                        tweet_messages: tweetMsg,
-                        art_messages: artMsg,
-                        avg_messages_per_active_user: activeUsers > 0 ? totalMsg / activeUsers : 0,
-                        active_users_7d: active7dResult.count || 0,
-                        active_users_30d: active30dResult.count || 0,
+                        total_users: snap.total_users,
+                        human_users: snap.human_users,
+                        bot_users: snap.bot_users,
+                        total_messages: snap.total_contributions, // Mapped from total_contributions
+                        tweet_messages: snap.tweet_messages,
+                        art_messages: snap.art_messages,
+                        total_chat_messages: snap.total_chat_messages,
+                        avg_messages_per_active_user: snap.avg_messages_per_active_user,
+                        active_users_7d: snap.active_users_7d,
+                        active_users_30d: snap.active_users_30d,
                     });
-                } else {
-                    const rpcData = statsResult.data as CommunityStats | null;
-                    if (rpcData) {
-                        setStats({
-                            total_users: rpcData.total_users,
-                            human_users: rpcData.human_users,
-                            bot_users: rpcData.bot_users,
-                            total_messages: rpcData.total_messages,
-                            tweet_messages: rpcData.tweet_messages,
-                            art_messages: rpcData.art_messages,
-                            avg_messages_per_active_user: rpcData.avg_messages_per_active_user,
-                            active_users_7d: active7dResult.count || 0,
-                            active_users_30d: active30dResult.count || 0,
-                        });
+
+                    if (snap.region_stats) {
+                        try {
+                            // Parse JSONB if it comes as string, or use directly if object
+                            const regions = typeof snap.region_stats === 'string'
+                                ? JSON.parse(snap.region_stats)
+                                : snap.region_stats;
+                            setRegionStats(regions);
+                        } catch (e) {
+                            console.error("Error parsing region stats", e);
+                        }
                     }
+
+                    if (snap.role_stats) {
+                        try {
+                            const roles = typeof snap.role_stats === 'string'
+                                ? JSON.parse(snap.role_stats)
+                                : snap.role_stats;
+                            setRoleStats(roles);
+                        } catch (e) {
+                            console.error("Error parsing role stats", e);
+                        }
+                    }
+
+                    if (snap.created_at) {
+                        setLastUpdated(new Date(snap.created_at));
+                    }
+                } else {
+                    // Fallback or empty state if no snapshot yet
+                    console.warn("No stats snapshot found.");
                 }
 
                 if (topResult.data) {
@@ -283,9 +145,8 @@ export default function StatsOverview() {
                     })));
                 }
 
-                if ((latestUpdateResult as any).data?.updated_at) {
-                    setLastUpdated(new Date((latestUpdateResult as any).data.updated_at));
-                }
+
+
             } catch (error) {
                 console.error('Stats fetch error:', error);
             } finally {
@@ -358,13 +219,7 @@ export default function StatsOverview() {
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 3v18h18" /><path d="M18 17V9" /><path d="M13 17V5" /><path d="M8 17v-3" /></svg>
                     Overview
                 </button>
-                <button
-                    className={`stats-tab ${activeTab === 'roles' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('roles')}
-                >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
-                    Roles
-                </button>
+
                 <button
                     className={`stats-tab ${activeTab === 'regions' ? 'active' : ''}`}
                     onClick={() => setActiveTab('regions')}
@@ -379,6 +234,14 @@ export default function StatsOverview() {
                 {/* Main Stats Grid */}
                 <div className="grid-stats-cards" style={{ marginBottom: 32 }}>
                     <div className="card">
+                        <div className="stat-label">Total Contributions</div>
+                        <div className="stat-value text-primary"><EncryptedText text={stats.total_messages.toLocaleString()} enabled={isEncrypted} /></div>
+                        <div className="text-muted mt-2" style={{ fontSize: '0.8125rem' }}>
+                            Tweet + Art combined
+                        </div>
+                    </div>
+
+                    <div className="card">
                         <div className="stat-label">Active Users (30d)</div>
                         <div className="stat-value"><EncryptedText text={stats.active_users_30d.toLocaleString()} enabled={isEncrypted} /></div>
                         <div className="text-muted mt-2" style={{ fontSize: '0.8125rem' }}>
@@ -386,13 +249,6 @@ export default function StatsOverview() {
                         </div>
                     </div>
 
-                    <div className="card">
-                        <div className="stat-label">Total Contributions</div>
-                        <div className="stat-value text-primary"><EncryptedText text={stats.total_messages.toLocaleString()} enabled={isEncrypted} /></div>
-                        <div className="text-muted mt-2" style={{ fontSize: '0.8125rem' }}>
-                            Tweet + Art combined
-                        </div>
-                    </div>
 
                     <div className="card">
                         <div className="stat-label">Tweet Contributions</div>
@@ -411,6 +267,14 @@ export default function StatsOverview() {
                             {stats.total_messages > 0
                                 ? <><EncryptedText text={((stats.art_messages / stats.total_messages) * 100).toFixed(1)} enabled={isEncrypted} />% of total</>
                                 : '0% of total'}
+                        </div>
+                    </div>
+
+                    <div className="card">
+                        <div className="stat-label">Total Chat Messages</div>
+                        <div className="stat-value" style={{ color: '#60d394' }}><EncryptedText text={stats.total_chat_messages.toLocaleString()} enabled={isEncrypted} /></div>
+                        <div className="text-muted mt-2" style={{ fontSize: '0.8125rem' }}>
+                            General + Devnet + Report only
                         </div>
                     </div>
 
@@ -494,38 +358,7 @@ export default function StatsOverview() {
                 </div>
             </>)}
 
-            {/* === ROLES TAB === */}
-            {activeTab === 'roles' && (<>
-                {/* Role Distribution - Full Width */}
-                <div className="card" style={{ marginBottom: 24 }}>
-                    <div className="card-header">
-                        <h3 className="card-title">Role Distribution</h3>
-                        <span className="text-muted" style={{ fontSize: '0.875rem' }}>{roleStats.length} roles tracked</span>
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                        {(() => {
-                            const maxCount = Math.max(...roleStats.map(r => r.user_count), 1);
-                            return roleStats.map((role) => {
-                                const iconPath = getRoleIconPath(role.role_name);
-                                return (
-                                    <div key={role.role_name}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, fontSize: '0.875rem' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, maxWidth: '70%' }}>
-                                                {iconPath && <img src={iconPath} alt="" style={{ width: 16, height: 16, objectFit: 'contain' }} />}
-                                                <span className="truncate">{role.role_name}</span>
-                                            </div>
-                                            <span className="text-muted"><EncryptedText text={role.user_count.toLocaleString()} enabled={isEncrypted} /></span>
-                                        </div>
-                                        <div className="progress-bar">
-                                            <div className="progress-fill" style={{ width: `${(role.user_count / maxCount) * 100}%` }} />
-                                        </div>
-                                    </div>
-                                );
-                            });
-                        })()}
-                    </div>
-                </div>
-            </>)}
+
 
             {/* === REGIONS TAB === */}
             {activeTab === 'regions' && (<>

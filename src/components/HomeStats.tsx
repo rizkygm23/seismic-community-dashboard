@@ -16,23 +16,36 @@ export default function HomeStats() {
     useEffect(() => {
         async function fetchQuickStats() {
             try {
-                const [humanCount, regionCount] = await Promise.all([
-                    supabase.from('seismic_dc_user')
-                        .select('id', { count: 'exact', head: true })
-                        .eq('is_bot', false),
-                    supabase.from('seismic_dc_user')
-                        .select('region')
-                        .eq('is_bot', false)
-                        .not('region', 'is', null),
-                ]);
+                const { data: rawSnapshot, error } = await supabase
+                    .from('seismic_stats_snapshot')
+                    .select('human_users, region_stats')
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .single();
 
-                // Count unique regions
-                const uniqueRegions = new Set((regionCount.data || []).map((r: any) => r.region)).size;
+                if (error) throw error;
 
-                setStats({
-                    contributors: humanCount.count || 0,
-                    regions: uniqueRegions,
-                });
+                // Cast to any to handle type inference issues
+                const snapshot = rawSnapshot as any;
+
+                if (snapshot) {
+                    let uniqueRegions = 0;
+                    if (snapshot.region_stats) {
+                        try {
+                            const regions = typeof snapshot.region_stats === 'string'
+                                ? JSON.parse(snapshot.region_stats)
+                                : snapshot.region_stats;
+                            uniqueRegions = Array.isArray(regions) ? regions.length : 0;
+                        } catch (e) {
+                            console.error("Error parsing region stats", e);
+                        }
+                    }
+
+                    setStats({
+                        contributors: snapshot.human_users || 0,
+                        regions: uniqueRegions,
+                    });
+                }
             } catch (err) {
                 console.error('Quick stats error:', err);
             }

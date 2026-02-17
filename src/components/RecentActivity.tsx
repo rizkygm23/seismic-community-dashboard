@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { SeismicUser } from '@/types/database';
+import { SeismicUser } from '@/types/database_manual';
 
 export default function RecentActivity() {
     const [recentUsers, setRecentUsers] = useState<SeismicUser[]>([]);
@@ -92,7 +92,7 @@ export default function RecentActivity() {
                                 {formatTimeAgo(user.last_message_date!)}
                             </div>
                             <div className="text-muted" style={{ fontSize: '0.75rem' }}>
-                                {user.total_messages.toLocaleString()} contribs
+                                {user.total_messages.toLocaleString()} Contributions
                             </div>
                         </div>
                     </div>

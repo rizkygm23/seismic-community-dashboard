@@ -9,22 +9,20 @@ export const revalidate = 60;
 
 export default async function HomePage() {
   // Fetch data in parallel
-  const [leaderboardRes, statsRes, globalRes, promoRes, exploreRes] = await Promise.all([
+  const [leaderboardRes, snapshotRes] = await Promise.all([
     // Leaderboard: Top 10 by total_messages (Art + Tweet)
-    supabase.from('seismic_dc_user').select('username, avatar_url, total_messages').order('total_messages', { ascending: false }).limit(10),
+    supabase.from('seismic_dc_user')
+      .select('username, avatar_url, total_messages')
+      .order('total_messages', { ascending: false })
+      .limit(10),
 
-    // Stats: RPC
-    supabase.rpc('get_community_stats'),
-
-    // Global: Fetch specific regions
-    supabase.from('seismic_dc_user').select('region').not('region', 'is', null).limit(2000),
-
-    // Promotion: Top 3 promoted users
-    supabase.from('seismic_dc_user').select('username, avatar_url, role_jumat').eq('is_promoted', true).order('role_jumat', { ascending: false }).limit(3),
-
-    // Explore: Count of users with roles (Magnitude 1-9, assuming role_jumat > 0)
-    supabase.from('seismic_dc_user').select('*', { count: 'exact', head: true }).gt('role_jumat', 0)
-  ]);
+    // Stats Snapshot: Single query for all aggregate data
+    supabase.from('seismic_stats_snapshot')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single()
+  ]) as [any, any];
 
   // --- Process Leaderboard ---
   const leaderboard = ((leaderboardRes.data as any[]) || []).map(u => ({
@@ -33,21 +31,24 @@ export default async function HomePage() {
     score: u.total_messages
   }));
 
-  // --- Process Stats ---
+  // --- Process Stats from Snapshot ---
   let totalContributions = 0;
+  let totalRegions = 0;
 
-  if ((statsRes as any).data && ((statsRes as any).data as any).total_messages > 0) {
-    totalContributions = ((statsRes as any).data as any).total_messages;
-  } else {
-    // Fallback: Sum total_messages from top 1000 users if RPC fails
-    const { data: fallbackData } = await supabase
-      .from('seismic_dc_user')
-      .select('total_messages')
-      .order('total_messages', { ascending: false })
-      .limit(1000);
+  if (snapshotRes.data) {
+    const snap = snapshotRes.data as any;
+    totalContributions = snap.total_contributions || 0;
 
-    if (fallbackData) {
-      totalContributions = fallbackData.reduce((sum, row: any) => sum + (row.total_messages || 0), 0);
+    // Parse region stats if needed
+    if (snap.region_stats) {
+      try {
+        const regions = typeof snap.region_stats === 'string'
+          ? JSON.parse(snap.region_stats)
+          : snap.region_stats;
+        totalRegions = Array.isArray(regions) ? regions.length : 0;
+      } catch (e) {
+        console.error("Error parsing region stats in home page", e);
+      }
     }
   }
 
@@ -55,40 +56,14 @@ export default async function HomePage() {
     totalContributions,
   };
 
-  // --- Process Global ---
-  const regionCounts: Record<string, number> = {};
-  ((globalRes.data as any[]) || []).forEach((row: any) => {
-    if (row.region) {
-      regionCounts[row.region] = (regionCounts[row.region] || 0) + 1;
-    }
-  });
   const globalData = {
-    totalRegions: Object.keys(regionCounts).length,
-  };
-
-  // --- Process Explore ---
-  const explore = {
-    roleHolderCount: exploreRes.count || 0,
-  };
-
-  // --- Process Promotion ---
-  const promotedUsers = ((promoRes.data as any[]) || []).map((u: any) => ({
-    username: u.username,
-    avatar_url: u.avatar_url,
-    roleMagnitude: u.role_jumat
-  }));
-
-  const promotion = {
-    hasPromotion: promotedUsers.length > 0,
-    users: promotedUsers
+    totalRegions,
   };
 
   const bentoData: HomeBentoData | any = {
     leaderboard,
     stats,
-    global: globalData,
-    explore,
-    promotion
+    global: globalData
   };
 
   return (
@@ -120,7 +95,7 @@ export default async function HomePage() {
         />
 
         <p className="text-muted" style={{ fontSize: '1.125rem', maxWidth: 520, margin: '0 auto' }}>
-          Look up your Discord or X username to see your contributions, rankings, and achievements in the Seismic community
+          Connect your Discord account to see your personal contributions, rankings, and achievements
         </p>
       </div>
 
@@ -134,6 +109,18 @@ export default async function HomePage() {
 
       {/* Bento Grid Navigation */}
       <div style={{ marginTop: 80 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', width: '100%', marginBottom: '32px', padding: '0 16px' }}>
+          <p style={{
+            fontSize: '14px',
+            color: 'rgb(163, 163, 163)',
+            fontStyle: 'italic',
+            textAlign: 'center',
+            maxWidth: '600px',
+            margin: 0
+          }}>
+            "These rankings are prepared based on numbers, but in Seismic, sometimes one high-level contribution can be more valuable than ten regular contributions"
+          </p>
+        </div>
         <HomeBentoGrid data={bentoData} />
       </div>
     </div>

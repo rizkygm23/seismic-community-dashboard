@@ -1,9 +1,10 @@
 'use client';
 
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { SeismicUser } from '@/types/database';
+import { SeismicUser } from '@/types/database_manual';
 import { MAGNITUDE_COLORS, DEFAULT_THEME_COLOR } from '@/lib/constants';
 import { getHighestMagnitudeRole } from '@/lib/roleUtils';
+import { getUserBadges } from '@/lib/badgeUtils';
 
 interface UserCardImageProps {
     user: SeismicUser;
@@ -62,19 +63,21 @@ function drawBadge(ctx: CanvasRenderingContext2D, text: string, x: number, y: nu
     const bw = tw + pw * 2;
     const bh = 14 + ph * 2;
 
-    // Dark background
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+    // Background with slight tint of the badge color
+    // We need to parse hex to rgba or just use color-mix if canvas supported it (it doesn't easily).
+    // Let's stick to dark background but use color for border.
+    ctx.fillStyle = 'rgba(25, 25, 25, 0.8)';
     roundRect(ctx, x, y, bw, bh, br);
     ctx.fill();
 
-    // Thin elegant border
-    ctx.strokeStyle = `rgba(255, 255, 255, 0.15)`;
+    // Border using the badge color
+    ctx.strokeStyle = color;
     ctx.lineWidth = 1;
     roundRect(ctx, x, y, bw, bh, br);
     ctx.stroke();
 
-    // Text (Subtle white)
-    ctx.fillStyle = '#e0e0e0';
+    // Text using the badge color
+    ctx.fillStyle = color;
     ctx.textAlign = 'center';
     ctx.fillText(text, x + bw / 2, y + bh / 2 + 3.5);
     ctx.textAlign = 'left';
@@ -243,9 +246,10 @@ async function drawCard(
         { value: user.total_messages, label: 'Contributions' },
         { value: user.tweet, label: 'Tweets' },
         { value: user.art, label: 'Artworks' },
+        { value: user.general_chat + user.devnet_chat + user.report_chat, label: 'Chat' },
     ];
 
-    const colW = (W - 60) / 3;
+    const colW = (W - 60) / 4;
 
     stats.forEach((stat, i) => {
         const cx = 30 + colW * i + colW / 2;
@@ -253,13 +257,13 @@ async function drawCard(
 
         // Value (White, Elegant font)
         ctx.fillStyle = '#fff';
-        ctx.font = '600 24px Inter, system-ui, sans-serif';
+        ctx.font = '600 20px Inter, system-ui, sans-serif';
         ctx.textAlign = 'center';
         ctx.fillText(stat.value.toLocaleString(), cx, cy);
 
         // Label (Dark Gray)
         ctx.fillStyle = '#666';
-        ctx.font = '500 11px Inter, system-ui, sans-serif';
+        ctx.font = '500 10px Inter, system-ui, sans-serif';
         ctx.fillText(stat.label.toUpperCase(), cx, cy + 20);
     });
     ctx.textAlign = 'left';
@@ -377,14 +381,53 @@ async function drawCard(
     if (joinedDays < 45 && user.total_messages > 300)
         achievements.push({ label: 'Rising Star', color: '#facc15', priority: 9 });
 
-    // Sort by priority (descending) and take top 5
+    // 6. Badges (Chat, Devnet, Report)
+    const userBadges = getUserBadges(user);
+    userBadges.forEach(badge => {
+        let priority = 0;
+        let color = badge.color;
+
+        if (badge.achieved) {
+            if (badge.tier === 'gold') priority = 15;
+            else if (badge.tier === 'silver') priority = 12;
+            else if (badge.tier === 'bronze') priority = 8;
+        } else {
+            priority = -10;
+            color = '#4a4a4a';
+        }
+
+        achievements.push({
+            label: badge.label,
+            color: color,
+            priority: priority
+        });
+    });
+
+    // Sort by priority (descending)
     achievements.sort((a, b) => b.priority - a.priority);
 
     let bx = 30;
-    achievements.slice(0, 5).forEach(ach => {
-        // Fallback color to white if theme color logic was too complex for this snippet
-        const w = drawBadge(ctx, ach.label, bx, badgeY, ach.color);
-        bx += w + 8;
+    let by = badgeY;
+
+    // We can fit roughly 2 rows. Let's try to fit as many as possible within bounds.
+    achievements.forEach(ach => {
+        // measure width first to check wrap
+        ctx.font = '500 10px Inter, system-ui, sans-serif';
+        const tw = ctx.measureText(ach.label).width;
+        const pw = 10;
+        const bw = tw + pw * 2; // logic from drawBadge
+
+        // If this badge would overflow, move to next line
+        if (bx + bw > W - 30) {
+            bx = 30;
+            by += 28; // row height (bh + gap)
+        }
+
+        // If we exceed vertical space (reserve ~25px for watermark at bottom), stop drawing
+        if (by + 24 > H - 25) return;
+
+        drawBadge(ctx, ach.label, bx, by, ach.color);
+        bx += bw + 8;
     });
 
     // === WATERMARK (Subtle) ===

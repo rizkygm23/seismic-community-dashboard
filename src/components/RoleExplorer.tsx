@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { RoleDistribution, LeaderboardUser } from '@/types/database';
+import { RoleDistribution, LeaderboardUser } from '@/types/database_manual';
 import { getHighestRoleIcon, getRoleIconPath } from '@/lib/roleUtils';
 import UserDetailModal from './UserDetailModal';
 import { LoaderFive } from "@/components/ui/loader";
@@ -29,7 +29,7 @@ export default function RoleExplorer() {
         while (foundMembers.length < 20) {
             const { data, error } = await supabase
                 .from('seismic_dc_user')
-                .select('id, username, display_name, avatar_url, roles, tweet, art, total_messages')
+                .select('id, username, display_name, avatar_url, roles, tweet, art, total_messages, general_chat, magnitude_chat, devnet_chat, report_chat')
                 .eq('is_bot', false)
                 .contains('roles', [roleName])
                 .order('total_messages', { ascending: false })
@@ -332,9 +332,13 @@ export default function RoleExplorer() {
                                                 <div className="font-medium text-accent">{user.art}</div>
                                                 <div className="text-muted" style={{ fontSize: '0.6875rem' }}>Art</div>
                                             </div>
+                                            <div title="General + Devnet + Report">
+                                                <div className="font-medium" style={{ color: '#60d394' }}>{(user.general_chat + user.devnet_chat + user.report_chat).toLocaleString()}</div>
+                                                <div className="text-muted" style={{ fontSize: '0.6875rem' }}>Chat*</div>
+                                            </div>
                                             <div>
                                                 <div className="font-semibold text-primary">{user.total_messages}</div>
-                                                <div className="text-muted" style={{ fontSize: '0.6875rem' }}>Total</div>
+                                                <div className="text-muted" style={{ fontSize: '0.6875rem' }}>Contributions</div>
                                             </div>
                                         </div>
                                     </div>

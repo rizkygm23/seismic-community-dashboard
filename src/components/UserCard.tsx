@@ -1,6 +1,6 @@
 'use client';
 
-import { SeismicUser } from '@/types/database';
+import { SeismicUser } from '@/types/database_manual';
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getRoleIconPath, getHighestRoleIcon } from '@/lib/roleUtils';
@@ -8,12 +8,14 @@ import { MAGNITUDE_COLORS, DEFAULT_THEME_COLOR } from '@/lib/constants';
 import UserCardImage from './UserCardImage';
 // @ts-ignore - Importing JS component
 import ElectricBorder from './ElectricBorder';
+import { getUserBadges, getBadgeStyle } from '@/lib/badgeUtils';
 
 interface UserCardProps {
     user: SeismicUser;
     showDownload?: boolean;
     showProfileLink?: boolean;
     compact?: boolean;
+    privacy?: boolean;
 }
 
 interface RankInfo {
@@ -24,7 +26,7 @@ interface RankInfo {
     totalUsers: number;
 }
 
-export default function UserCard({ user, showDownload = true, showProfileLink = true, compact = false }: UserCardProps) {
+export default function UserCard({ user, showDownload = true, showProfileLink = true, compact = false, privacy = false }: UserCardProps) {
     const [rankInfo, setRankInfo] = useState<RankInfo | null>(null);
     const [loading, setLoading] = useState(true);
     const [showCardImage, setShowCardImage] = useState(false);
@@ -57,10 +59,10 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                 const roleString = `Magnitude ${currentMag}.0`;
 
                 const queries = [
-                    supabase.from('seismic_dc_user').select('id', { count: 'exact', head: true }).eq('is_bot', false).gt('total_messages', user.total_messages),
-                    supabase.from('seismic_dc_user').select('id', { count: 'exact', head: true }).eq('is_bot', false).gt('tweet', user.tweet),
-                    supabase.from('seismic_dc_user').select('id', { count: 'exact', head: true }).eq('is_bot', false).gt('art', user.art),
-                    supabase.from('seismic_dc_user').select('id', { count: 'exact', head: true }).eq('is_bot', false),
+                    supabase.from('seismic_dc_user').select('id', { count: 'exact', head: true }).eq('is_bot', false).contains('roles', ['Magnitude 1.0']).gt('total_messages', user.total_messages),
+                    supabase.from('seismic_dc_user').select('id', { count: 'exact', head: true }).eq('is_bot', false).contains('roles', ['Magnitude 1.0']).gt('tweet', user.tweet),
+                    supabase.from('seismic_dc_user').select('id', { count: 'exact', head: true }).eq('is_bot', false).contains('roles', ['Magnitude 1.0']).gt('art', user.art),
+                    supabase.from('seismic_dc_user').select('id', { count: 'exact', head: true }).eq('is_bot', false).contains('roles', ['Magnitude 1.0']),
                 ];
 
                 if (currentMag > 0) {
@@ -281,53 +283,26 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                                     {user.region}
                                 </div>
                             )}
-                            {showProfileLink && (
-                                <a
-                                    href={`/user/${user.username}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    style={{
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: 4,
-                                        fontSize: '0.75rem',
-                                        padding: '2px 8px',
-                                        background: 'rgba(255,255,255,0.06)',
-                                        border: '1px solid var(--seismic-gray-700)',
-                                        borderRadius: 'var(--border-radius-sm)',
-                                        color: 'var(--seismic-gray-400)',
-                                        textDecoration: 'none',
-                                        transition: 'all 0.2s',
-                                        cursor: 'pointer',
-                                    }}
-                                    title="Open shareable profile page"
-                                >
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                                    </svg>
-                                    Profile Link
-                                </a>
-                            )}
+
 
                         </div>
                     </div>
                 </div>
 
-                {achievements.length > 0 && (
+                {(achievements.length > 0 || getUserBadges(user).length > 0) && (
                     <div style={{
                         display: 'flex',
                         flexWrap: 'wrap',
-                        gap: 6,
-                        marginBottom: 16,
-                        padding: 10,
+                        gap: 8,
+                        marginBottom: 24,
+                        padding: 12,
                         background: `color-mix(in srgb, ${themeColor} 10%, #151515)`,
                         borderRadius: 'var(--border-radius-sm)',
                         border: `1px solid ${themeColor}30`
                     }}>
                         {achievements.map((ach, i) => (
                             <span
-                                key={i}
+                                key={`ach-${i}`}
                                 className="badge"
                                 style={{
                                     backgroundColor: `${ach.color}15`,
@@ -341,10 +316,52 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                                 {ach.label}
                             </span>
                         ))}
+                        {getUserBadges(user).map((badge) => {
+                            const isAch = badge.achieved;
+                            const opacity = badge.tier === 'gold' ? 0.3 : badge.tier === 'silver' ? 0.2 : 0.15;
+                            const borderOpacity = badge.tier === 'gold' ? 0.6 : badge.tier === 'silver' ? 0.4 : 0.3;
+
+                            // Base style
+                            let style = {
+                                background: `color-mix(in srgb, ${badge.color} ${opacity * 100}%, transparent)`,
+                                border: `1px solid color-mix(in srgb, ${badge.color} ${borderOpacity * 100}%, transparent)`,
+                                color: 'var(--seismic-white)',
+                                opacity: 1,
+                            };
+
+                            // Override for unachieved
+                            if (!isAch) {
+                                style = {
+                                    background: 'rgba(255, 255, 255, 0.02)',
+                                    border: '1px dashed rgba(255, 255, 255, 0.1)',
+                                    color: 'rgba(255, 255, 255, 0.3)',
+                                    opacity: 0.7,
+                                };
+                            }
+
+                            return (
+                                <span
+                                    key={badge.id}
+                                    className="badge"
+                                    title={isAch ? badge.description : `${badge.description} (Not yet earned)`}
+                                    style={{
+                                        ...style,
+                                        fontSize: '0.75rem',
+                                        padding: '4px 10px',
+                                        fontWeight: 500,
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: 6,
+                                        cursor: 'help'
+                                    }}
+                                >
+                                    <span>{badge.label}</span>
+                                </span>
+                            );
+                        })}
                     </div>
                 )}
 
-                {/* Contribution Stats */}
                 <div className="grid-stats" style={{
                     marginBottom: 24,
                     padding: 20,
@@ -353,36 +370,41 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                     border: `1px solid ${themeColor}30`,
                 }}>
                     <div className="text-center">
-                        <div className="stat-value text-primary">{user.total_messages.toLocaleString()}</div>
+                        <div className="stat-value text-primary">{privacy ? '****' : user.total_messages.toLocaleString()}</div>
                         <div className="stat-label">Total Contributions</div>
                         {!loading && rankInfo && (
                             <div className="badge badge-primary" style={{ marginTop: 8 }}>
-                                #{rankInfo.totalRank.toLocaleString()}
+                                {privacy ? '#****' : `#${rankInfo.totalRank.toLocaleString()}`}
                             </div>
                         )}
                     </div>
                     <div className="text-center">
-                        <div className="stat-value text-secondary">{user.tweet.toLocaleString()}</div>
+                        <div className="stat-value text-secondary">{privacy ? '****' : user.tweet.toLocaleString()}</div>
                         <div className="stat-label">Tweets</div>
                         {!loading && rankInfo && (
                             <div className="badge badge-secondary" style={{ marginTop: 8 }}>
-                                #{rankInfo.tweetRank.toLocaleString()}
+                                {privacy ? '#****' : `#${rankInfo.tweetRank.toLocaleString()}`}
                             </div>
                         )}
                     </div>
                     <div className="text-center">
-                        <div className="stat-value text-accent">{user.art.toLocaleString()}</div>
+                        <div className="stat-value text-accent">{privacy ? '****' : user.art.toLocaleString()}</div>
                         <div className="stat-label">Art</div>
                         {!loading && rankInfo && (
                             <div className="badge badge-accent" style={{ marginTop: 8 }}>
-                                #{rankInfo.artRank.toLocaleString()}
+                                {privacy ? '#****' : `#${rankInfo.artRank.toLocaleString()}`}
                             </div>
                         )}
+                    </div>
+                    <div className="text-center">
+                        <div className="stat-value" style={{ color: '#60d394' }}>{privacy ? '****' : (user.general_chat + user.devnet_chat + user.report_chat).toLocaleString()}</div>
+                        <div className="stat-label">Total Chat</div>
+                        <div className="text-muted" style={{ fontSize: '0.6rem', marginTop: 2 }}>General + Devnet + Report only</div>
                     </div>
                 </div>
 
                 {/* Percentile Banner */}
-                {!loading && percentile && (
+                {!loading && percentile && !privacy && (
                     <div className="percentile-banner" style={{
                         textAlign: 'center',
                         padding: 14,
@@ -398,6 +420,26 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                             Top {(100 - parseFloat(percentile)).toFixed(2)}%
                         </div>
                         <div style={{ fontSize: '0.8125rem', opacity: 0.9, textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>of all contributors</div>
+                    </div>
+
+                )}
+
+                {/* Encrypted Percentile Banner */}
+                {!loading && percentile && privacy && (
+                    <div className="percentile-banner" style={{
+                        textAlign: 'center',
+                        padding: 14,
+                        marginBottom: 16,
+                        background: `rgba(0,0,0,0.3)`,
+                        borderRadius: 'var(--border-radius)',
+                        color: 'var(--seismic-gray-400)',
+                        border: `1px dashed var(--seismic-gray-700)`,
+                    }}>
+                        <div style={{ fontSize: '0.875rem', opacity: 0.8, marginBottom: 4 }}>Rank Percentile</div>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 700, fontFamily: 'monospace', letterSpacing: 4 }}>
+                            ****
+                        </div>
+                        <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>Encrypted for privacy</div>
                     </div>
                 )}
 
@@ -475,7 +517,7 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                                 <div style={{ padding: 16, background: `color-mix(in srgb, ${themeColor} 8%, #151515)`, borderRadius: 'var(--border-radius-sm)', border: `1px solid ${themeColor}20` }}>
                                     <div className="text-muted" style={{ fontSize: '0.875rem', marginBottom: 4 }}>Avg. per Day</div>
                                     <div className="font-medium" style={{ color: 'var(--seismic-white)' }}>
-                                        {messagesPerDay} per day
+                                        {privacy ? '****' : messagesPerDay} Contributions/Day
                                     </div>
                                 </div>
                             </div>
@@ -525,6 +567,37 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                                 </div>
                             </div>
                         </div>
+
+                        {/* Chat Breakdown */}
+                        {(user.general_chat + user.devnet_chat + user.report_chat) > 0 && (
+                            <div style={{ marginBottom: 16 }}>
+                                <h4 style={{ marginBottom: 10, color: themeColor, fontSize: '1rem' }}>Chat Breakdown</h4>
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(3, 1fr)',
+                                    gap: 8,
+                                }}>
+                                    {[
+                                        { label: 'General', value: user.general_chat, color: '#60d394' },
+                                        { label: 'Devnet', value: user.devnet_chat, color: '#90b4f8' },
+                                        { label: 'Report', value: user.report_chat, color: '#f48c8c' },
+                                    ].map((ch) => (
+                                        <div key={ch.label} style={{
+                                            padding: 12,
+                                            background: `color-mix(in srgb, ${themeColor} 8%, #151515)`,
+                                            borderRadius: 'var(--border-radius-sm)',
+                                            border: `1px solid ${themeColor}20`,
+                                            textAlign: 'center',
+                                        }}>
+                                            <div className="font-medium" style={{ color: ch.color, fontSize: '1.1rem' }}>
+                                                {privacy ? '****' : ch.value.toLocaleString()}
+                                            </div>
+                                            <div className="text-muted" style={{ fontSize: '0.7rem', marginTop: 2 }}>{ch.label}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         {/* Roles */}
                         {displayRoles.length > 0 && (
@@ -588,76 +661,80 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                 </div>
             </div>
 
-            {!loading && rankInfo && (
-                <div style={{ marginTop: 16, display: 'flex', justifyContent: 'center' }}>
-                    <button
-                        onClick={() => setShowCardImage(true)}
-                        style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 8,
-                            padding: '10px 20px',
-                            background: 'rgba(255,255,255,0.06)',
-                            border: '1px solid var(--seismic-gray-700)',
-                            borderRadius: '12px',
-                            color: 'var(--seismic-gray-300)',
-                            cursor: 'pointer',
-                            fontSize: '0.9rem',
-                            transition: 'all 0.2s',
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-                            e.currentTarget.style.transform = 'translateY(-2px)';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
-                            e.currentTarget.style.transform = 'translateY(0)';
-                        }}
-                        title="Generate shareable card image"
-                    >
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                            <circle cx="8.5" cy="8.5" r="1.5" />
-                            <polyline points="21 15 16 10 5 21" />
-                        </svg>
-                        Save as Image
-                    </button>
-                </div>
-            )}
+            {
+                !loading && rankInfo && (
+                    <div style={{ marginTop: 16, display: 'flex', justifyContent: 'center' }}>
+                        <button
+                            onClick={() => setShowCardImage(true)}
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 8,
+                                padding: '10px 20px',
+                                background: 'rgba(255,255,255,0.06)',
+                                border: '1px solid var(--seismic-gray-700)',
+                                borderRadius: '12px',
+                                color: 'var(--seismic-gray-300)',
+                                cursor: 'pointer',
+                                fontSize: '0.9rem',
+                                transition: 'all 0.2s',
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                                e.currentTarget.style.transform = 'translateY(-2px)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                                e.currentTarget.style.transform = 'translateY(0)';
+                            }}
+                            title="Generate shareable card image"
+                        >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                <circle cx="8.5" cy="8.5" r="1.5" />
+                                <polyline points="21 15 16 10 5 21" />
+                            </svg>
+                            Save as Image
+                        </button>
+                    </div>
+                )
+            }
 
             {/* Card Image Modal */}
-            {showCardImage && (
-                <div
-                    className="modal-overlay"
-                    onClick={(e) => {
-                        if (e.target === e.currentTarget) setShowCardImage(false);
-                    }}
-                >
-                    <div style={{ maxWidth: 640, width: '100%', padding: '0 16px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
-                            <button
-                                onClick={() => setShowCardImage(false)}
-                                style={{
-                                    background: 'rgba(0, 0, 0, 0.6)',
-                                    border: '1px solid var(--seismic-gray-700)',
-                                    borderRadius: '50%',
-                                    width: 32,
-                                    height: 32,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    color: 'var(--seismic-white)',
-                                    fontSize: 16,
-                                    cursor: 'pointer',
-                                }}
-                            >
-                                ✕
-                            </button>
+            {
+                showCardImage && (
+                    <div
+                        className="modal-overlay"
+                        onClick={(e) => {
+                            if (e.target === e.currentTarget) setShowCardImage(false);
+                        }}
+                    >
+                        <div style={{ maxWidth: 640, width: '100%', padding: '0 16px' }}>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+                                <button
+                                    onClick={() => setShowCardImage(false)}
+                                    style={{
+                                        background: 'rgba(0, 0, 0, 0.6)',
+                                        border: '1px solid var(--seismic-gray-700)',
+                                        borderRadius: '50%',
+                                        width: 32,
+                                        height: 32,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: 'var(--seismic-white)',
+                                        fontSize: 16,
+                                        cursor: 'pointer',
+                                    }}
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                            <UserCardImage user={user} rankInfo={rankInfo} />
                         </div>
-                        <UserCardImage user={user} rankInfo={rankInfo} />
                     </div>
-                </div>
-            )}
+                )
+            }
         </div >
     );
 }

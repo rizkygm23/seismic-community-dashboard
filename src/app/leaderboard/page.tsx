@@ -20,6 +20,9 @@ export default function LeaderboardPage() {
                 <p className="text-muted">
                     Top community contributors ranked by their activity
                 </p>
+                <p className="text-muted italic mt-4 text-sm">
+                    "These rankings are prepared based on numbers, but in Seismic, sometimes one high-level contribution can be more valuable than ten regular contributions"
+                </p>
             </div>
 
             <Suspense fallback={

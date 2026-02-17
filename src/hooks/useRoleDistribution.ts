@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { RoleDistribution } from '@/types/database';
+import { RoleDistribution } from '@/types/database_manual';
 
 /**
  * Fetches and processes role distribution data.
