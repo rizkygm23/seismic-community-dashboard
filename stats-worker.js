@@ -220,6 +220,48 @@ async function calculateAndSaveStats() {
     }
 }
 
+async function cleanupOldAuthUsers() {
+    try {
+        // console.log(`[${new Date().toISOString()}] Checking for stale auth users (older than 24h)...`);
+
+        // Fetch up to 1000 users (should be enough for daily active users of this dashboard)
+        const { data: { users }, error } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
+
+        if (error) {
+            console.error('Error listing auth users:', error);
+            return;
+        }
+
+        const now = Date.now();
+        const MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
+        let deletedCount = 0;
+
+        if (users && users.length > 0) {
+            for (const user of users) {
+                // Check last sign in time
+                const lastSignIn = user.last_sign_in_at ? new Date(user.last_sign_in_at).getTime() : 0;
+
+                // Delete if older than 24 hours
+                if (now - lastSignIn > MAX_AGE_MS) {
+                    const { error: deleteError } = await supabase.auth.admin.deleteUser(user.id);
+                    if (deleteError) {
+                        console.error(`Failed to delete user session ${user.id}:`, deleteError.message);
+                    } else {
+                        deletedCount++;
+                    }
+                }
+            }
+        }
+
+        if (deletedCount > 0) {
+            console.log(`[${new Date().toISOString()}] 🔒 Security Sweep: Removed ${deletedCount} old login sessions.`);
+        }
+
+    } catch (err) {
+        console.error('Error in auth cleanup routine:', err);
+    }
+}
+
 // Infinite Loop Runner
 async function runWorker() {
     console.log("=== Seismic Stats Worker Initialization ===");
@@ -233,6 +275,7 @@ async function runWorker() {
         console.log(`Sleeping for ${COOLDOWN_MS / 1000 / 60} minutes before next run...`);
         await new Promise(resolve => setTimeout(resolve, COOLDOWN_MS));
         await calculateAndSaveStats();
+        await cleanupOldAuthUsers();
     }
 }
 
