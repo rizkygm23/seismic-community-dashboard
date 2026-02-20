@@ -94,7 +94,7 @@ export default function UserSearch() {
                             bannedName.toLowerCase() === username.toLowerCase()
                         );
                         if (isBanned) {
-                            setError("Data tidak ada atau Anda tidak bisa melihat data.");
+                            setError("Data not found or you don't have permission to view it.");
                         } else {
                             setDbUser(data);
                         }
@@ -137,7 +137,7 @@ export default function UserSearch() {
                             bannedName.toLowerCase() === username.toLowerCase()
                         );
                         if (isBanned) {
-                            setError("Data tidak ada atau Anda tidak bisa melihat data.");
+                            setError("Data not found or you don't have permission to view it.");
                         } else {
                             setDbUser(nameData);
                         }
@@ -158,7 +158,7 @@ export default function UserSearch() {
                 );
 
                 if (isBanned) {
-                    setError("Data tidak ada atau Anda tidak bisa melihat data.");
+                    setError("Data not found or you don't have permission to view it.");
                 } else {
                     setDbUser(data);
                 }
