@@ -454,12 +454,15 @@ export default function StatsOverview() {
                                         <div key={region.region}>
                                             <div style={{
                                                 display: 'flex',
+                                                flexDirection: 'row',
+                                                flexWrap: 'wrap',
                                                 justifyContent: 'space-between',
                                                 marginBottom: 4,
+                                                gap: 8,
                                                 fontSize: '0.875rem'
                                             }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                                    <span className="rank-badge rank-default" style={{
+                                                <div style={{ display: 'flex', alignItems: 'center', minWidth: 0, flex: '1 1 auto', gap: 8 }}>
+                                                    <span className="rank-badge rank-default shrink-0" style={{
                                                         minWidth: 24,
                                                         height: 24,
                                                         fontSize: '0.75rem',
@@ -468,18 +471,18 @@ export default function StatsOverview() {
                                                     }}>
                                                         {index + 1}
                                                     </span>
-                                                    <span style={{ fontWeight: 500 }}>
+                                                    <span style={{ fontWeight: 500 }} className="truncate">
                                                         <EncryptedText text={region.region} enabled={isEncrypted} />
                                                     </span>
                                                 </div>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontSize: '0.8125rem' }}>
-                                                    <span className="text-muted">
+                                                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px 16px', fontSize: '0.8125rem', justifyContent: 'flex-end' }}>
+                                                    <span className="text-muted whitespace-nowrap">
                                                         <EncryptedText text={region.user_count.toLocaleString()} enabled={isEncrypted} /> users
                                                     </span>
-                                                    <span style={{ color: 'var(--seismic-primary)', fontWeight: 500 }}>
+                                                    <span style={{ color: 'var(--seismic-primary)', fontWeight: 500 }} className="whitespace-nowrap">
                                                         {percentage}%
                                                     </span>
-                                                    <span className="text-muted" title="Average contributions per user">
+                                                    <span className="text-muted whitespace-nowrap" title="Average contributions per user">
                                                         ~<EncryptedText text={avgContrib.toLocaleString()} enabled={isEncrypted} />/user
                                                     </span>
                                                 </div>

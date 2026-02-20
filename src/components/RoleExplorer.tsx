@@ -284,59 +284,59 @@ export default function RoleExplorer() {
                                         key={user.id}
                                         onClick={() => setSelectedUser(user)}
                                         style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: 12,
                                             padding: 12,
                                             background: 'var(--seismic-gray-800)',
                                             borderRadius: 'var(--border-radius-sm)',
                                             cursor: 'pointer',
                                             transition: 'background-color 0.2s'
                                         }}
-                                        className="hover:bg-gray-700"
+                                        className="hover:bg-gray-700 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4"
                                     >
-                                        <div className="avatar avatar-sm">
-                                            {user.avatar_url ? (
-                                                <img src={user.avatar_url} alt={user.username} />
-                                            ) : (
-                                                user.username[0].toUpperCase()
-                                            )}
-                                        </div>
-                                        <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div className="font-medium truncate" style={{
-                                                color: 'var(--seismic-white)',
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: 6
-                                            }}>
-                                                {user.display_name || user.username}
-                                                {roleIcon && (
-                                                    <img
-                                                        src={roleIcon}
-                                                        alt=""
-                                                        title="Highest Role"
-                                                        style={{ width: 14, height: 14, objectFit: 'contain' }}
-                                                    />
+                                        <div className="flex items-center gap-3 w-full sm:w-auto sm:flex-1 min-w-0">
+                                            <div className="avatar avatar-sm shrink-0">
+                                                {user.avatar_url ? (
+                                                    <img src={user.avatar_url} alt={user.username} />
+                                                ) : (
+                                                    user.username[0].toUpperCase()
                                                 )}
                                             </div>
-                                            <div className="text-muted" style={{ fontSize: '0.8125rem' }}>
-                                                @{user.username}
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div className="font-medium truncate" style={{
+                                                    color: 'var(--seismic-white)',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: 6
+                                                }}>
+                                                    <span className="truncate">{user.display_name || user.username}</span>
+                                                    {roleIcon && (
+                                                        <img
+                                                            src={roleIcon}
+                                                            alt=""
+                                                            title="Highest Role"
+                                                            style={{ width: 14, height: 14, objectFit: 'contain' }}
+                                                            className="shrink-0"
+                                                        />
+                                                    )}
+                                                </div>
+                                                <div className="text-muted truncate" style={{ fontSize: '0.8125rem' }}>
+                                                    @{user.username}
+                                                </div>
                                             </div>
                                         </div>
-                                        <div style={{ display: 'flex', gap: 16, textAlign: 'right' }}>
-                                            <div>
+                                        <div className="flex justify-between sm:justify-end sm:gap-6 w-full sm:w-auto mt-1 sm:mt-0 pt-2 sm:pt-0 border-t sm:border-0 border-[var(--seismic-gray-700)]">
+                                            <div className="text-center sm:text-right flex-1 sm:flex-none">
                                                 <div className="font-medium text-secondary">{user.tweet}</div>
                                                 <div className="text-muted" style={{ fontSize: '0.6875rem' }}>Tweet</div>
                                             </div>
-                                            <div>
+                                            <div className="text-center sm:text-right flex-1 sm:flex-none">
                                                 <div className="font-medium text-accent">{user.art}</div>
                                                 <div className="text-muted" style={{ fontSize: '0.6875rem' }}>Art</div>
                                             </div>
-                                            <div title="General + Devnet + Report">
+                                            <div className="text-center sm:text-right flex-1 sm:flex-none" title="General + Devnet + Report">
                                                 <div className="font-medium" style={{ color: '#60d394' }}>{(user.general_chat + user.devnet_chat + user.report_chat).toLocaleString()}</div>
                                                 <div className="text-muted" style={{ fontSize: '0.6875rem' }}>Chat*</div>
                                             </div>
-                                            <div>
+                                            <div className="text-center sm:text-right flex-1 sm:flex-none">
                                                 <div className="font-semibold text-primary">{user.total_messages}</div>
                                                 <div className="text-muted" style={{ fontSize: '0.6875rem' }}>Contributions</div>
                                             </div>

@@ -6,6 +6,7 @@ import { SeismicUser } from '@/types/database_manual';
 import UserCard from './UserCard';
 import { LoaderFive } from "@/components/ui/loader";
 import { User } from '@supabase/supabase-js';
+import banList from '@/data/ban_list.json';
 
 export default function UserSearch() {
     const [user, setUser] = useState<User | null>(null);
@@ -88,7 +89,15 @@ export default function UserSearch() {
                         .single();
 
                     if (data) {
-                        setDbUser(data);
+                        const isBanned = banList.some((bannedName: string) =>
+                            bannedName.toLowerCase() === (data as any).username.toLowerCase() ||
+                            bannedName.toLowerCase() === username.toLowerCase()
+                        );
+                        if (isBanned) {
+                            setError("Data tidak ada atau Anda tidak bisa melihat data.");
+                        } else {
+                            setDbUser(data);
+                        }
                     } else {
                         setError(`Could not find stats for @${username}. You may not have been active recently.`);
                     }
@@ -123,7 +132,15 @@ export default function UserSearch() {
                         .single();
 
                     if (nameData) {
-                        setDbUser(nameData);
+                        const isBanned = banList.some((bannedName: string) =>
+                            bannedName.toLowerCase() === (nameData as any).username.toLowerCase() ||
+                            bannedName.toLowerCase() === username.toLowerCase()
+                        );
+                        if (isBanned) {
+                            setError("Data tidak ada atau Anda tidak bisa melihat data.");
+                        } else {
+                            setDbUser(nameData);
+                        }
                     } else {
                         setError(`Welcome, ${username}! We couldn't find your stats yet. Data is synced periodically.`);
                     }
@@ -131,7 +148,20 @@ export default function UserSearch() {
                     setError("Welcome! We couldn't find your stats in our database yet.");
                 }
             } else {
-                setDbUser(data);
+                const authUsername = authUser.user_metadata.custom_claims?.global_name ||
+                    authUser.user_metadata.full_name ||
+                    authUser.user_metadata.name;
+
+                const isBanned = banList.some((bannedName: string) =>
+                    bannedName.toLowerCase() === (data as any).username.toLowerCase() ||
+                    (authUsername && bannedName.toLowerCase() === authUsername.toLowerCase())
+                );
+
+                if (isBanned) {
+                    setError("Data tidak ada atau Anda tidak bisa melihat data.");
+                } else {
+                    setDbUser(data);
+                }
             }
         } catch (err) {
             console.error('Error fetching user data:', err);
