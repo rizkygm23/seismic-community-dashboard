@@ -1,5 +1,5 @@
 'use client';
-
+import GlareHover from './GlareHover'
 import { SeismicUser } from '@/types/database_manual';
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -219,16 +219,25 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
 
     return (
         <div style={{ maxWidth: 600, margin: '0 auto' }}>
-            <div
+            <GlareHover
                 ref={cardRef}
                 id="card-capture-target"
                 className={`card ${compact ? 'user-card-compact' : 'user-card-main'}`}
+                width="100%"
+                height="auto"
+                background={`color-mix(in srgb, ${themeColor} 15%, #0a0a0a)`}
+                borderColor={`${themeColor}80`}
+                borderRadius="var(--border-radius)"
+                glareColor={themeColor}
+                glareOpacity={0.6}
                 style={{
                     padding: compact ? 16 : 24,
-                    backgroundColor: `color-mix(in srgb, ${themeColor} 15%, #0a0a0a)`,
                     fontFamily: 'sans-serif',
-                    border: `2px solid ${themeColor}80`,
+                    borderWidth: '2px', // Overrides GlareHover.css 1px border
                     boxShadow: `0 0 30px ${themeColor}30, 0 0 60px ${themeColor}15`,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    cursor: 'default', // Override pointer on hover
                 }}
             >
                 {/* User Header */}
@@ -659,8 +668,7 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                         </div>
                     </div>
                 </div>
-            </div>
-
+            </GlareHover>
             {
                 !loading && rankInfo && (
                     <div style={{ marginTop: 16, display: 'flex', justifyContent: 'center' }}>

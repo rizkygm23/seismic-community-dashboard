@@ -443,6 +443,7 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [ready, setReady] = useState(false);
     const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
+    const [isRecording, setIsRecording] = useState(false);
 
     const renderCard = useCallback(async () => {
         if (!canvasRef.current) return;
@@ -458,7 +459,7 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
         renderCard();
     }, [renderCard]);
 
-    const handleDownload = () => {
+    const handleDownloadImage = () => {
         if (!canvasRef.current) return;
         const link = document.createElement('a');
         link.download = `${user.username}-seismic-card.png`;
@@ -486,13 +487,258 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
         }
     };
 
+    const handleDownloadVideo = async () => {
+        if (!canvasRef.current || isRecording) return;
+        setIsRecording(true);
+        try {
+            const THREE = await import('three');
+
+            const vw = 600;
+            const vh = 380;
+
+            const scene = new THREE.Scene();
+            // Dark elegant background for the video
+            scene.background = new THREE.Color('#080808');
+
+            // Find perfect distance to fit the card
+            const camera = new THREE.PerspectiveCamera(45, vw / vh, 0.1, 1000);
+            camera.position.z = 520; // slightly padded 
+
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+            renderer.setPixelRatio(DPR); // Ensure high-resolution rendering
+            renderer.setSize(vw, vh);
+
+            const texture = new THREE.CanvasTexture(canvasRef.current);
+            texture.colorSpace = THREE.SRGBColorSpace;
+            texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+            texture.minFilter = THREE.LinearFilter;
+
+            // Re-create the card shape with a slight thickness and ROUNDED corners
+            const radius = 20; // Matches the 20px border radius from canvas stroke/fill
+            const roundedRectShape = new THREE.Shape();
+
+            // Draw a rounded rectangle centered at 0,0
+            const x = -vw / 2;
+            const y = -vh / 2;
+
+            roundedRectShape.moveTo(x, y + radius);
+            roundedRectShape.lineTo(x, y + vh - radius);
+            roundedRectShape.quadraticCurveTo(x, y + vh, x + radius, y + vh);
+            roundedRectShape.lineTo(x + vw - radius, y + vh);
+            roundedRectShape.quadraticCurveTo(x + vw, y + vh, x + vw, y + vh - radius);
+            roundedRectShape.lineTo(x + vw, y + radius);
+            roundedRectShape.quadraticCurveTo(x + vw, y, x + vw - radius, y);
+            roundedRectShape.lineTo(x + radius, y);
+            roundedRectShape.quadraticCurveTo(x, y, x, y + radius);
+
+            const extrusionSettings = {
+                depth: 6, // Thickness of the card
+                bevelEnabled: true,
+                bevelSegments: 2,
+                steps: 1,
+                bevelSize: 0.5,
+                bevelThickness: 0.5
+            };
+
+            const geometry = new THREE.ExtrudeGeometry(roundedRectShape, extrusionSettings);
+
+            // Fix UV mapping for the front/back faces of ExtrudeGeometry
+            const position = geometry.attributes.position;
+            const uv = geometry.attributes.uv;
+            for (let i = 0; i < uv.count; i++) {
+                const px = position.getX(i);
+                const py = position.getY(i);
+
+                // Map X from [-vw/2, vw/2] -> [0, 1]
+                const u = (px + vw / 2) / vw;
+                // Map Y from [-vh/2, vh/2] -> [0, 1]
+                const v = (py + vh / 2) / vh;
+
+                uv.setXY(i, u, v);
+            }
+
+            // The extrude geometry is created from z=0 to z=depth. Let's center it.
+            geometry.translate(0, 0, -3);
+
+            // Add lighting for realistic glare
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
+            directionalLight.position.set(0, 50, 200);
+            scene.add(directionalLight);
+
+            // Add a point light to simulate a strong highlight reflection (the glare)
+            const pointLight = new THREE.PointLight(0xffffff, 2, 800);
+            pointLight.position.set(100, 100, 150);
+            scene.add(pointLight);
+
+            // ExtrudeGeometry uses material index 0 for faces (front/back), index 1 for sides (extrusion+bevel)
+            // We use MeshStandardMaterial to react to light
+            const darkMat = new THREE.MeshStandardMaterial({
+                color: 0x111111,
+                roughness: 0.7,
+                metalness: 0.3
+            });
+            const frontMat = new THREE.MeshStandardMaterial({
+                map: texture,
+                roughness: 0.2, // Low roughness for shiny/glare effect
+                metalness: 0.1,
+            });
+
+            const materials = [frontMat, darkMat];
+
+            const mesh = new THREE.Mesh(geometry, materials);
+            scene.add(mesh);
+
+            // ---- Audio Generation (MP3 + Sweep Glare) ----
+            const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+            const audioCtx = new AudioContextClass();
+            const dest = audioCtx.createMediaStreamDestination();
+
+            const masterGain = audioCtx.createGain();
+            masterGain.gain.value = 0.5; // Main volume
+
+            // Add a lowpass filter to make everything sound warmer and smoother
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.value = 1500;
+            filter.connect(dest);
+            masterGain.connect(filter);
+
+            let audioSource: AudioBufferSourceNode | null = null;
+
+            try {
+                // Fetch the bgm file from the public directory
+                const audioRes = await fetch('/bgm-432hz.mp3');
+                if (audioRes.ok) {
+                    const audioData = await audioRes.arrayBuffer();
+                    const audioBuffer = await audioCtx.decodeAudioData(audioData);
+
+                    audioSource = audioCtx.createBufferSource();
+                    audioSource.buffer = audioBuffer;
+                    audioSource.connect(masterGain);
+                    audioSource.start();
+                } else {
+                    console.warn('Could not load BGM file, falling back to silent or sweep only.');
+                }
+            } catch (err) {
+                console.error('Error loading audio file:', err);
+            }
+
+            // Glare sweep (Smooth and soft)
+            const sweepOsc = audioCtx.createOscillator();
+            sweepOsc.type = 'sine'; // Sine is much smoother than triangle
+            sweepOsc.frequency.setValueAtTime(250, audioCtx.currentTime);
+            sweepOsc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 5);
+            sweepOsc.frequency.exponentialRampToValueAtTime(250, audioCtx.currentTime + 10);
+
+            const sweepGain = audioCtx.createGain();
+            sweepGain.gain.setValueAtTime(0, audioCtx.currentTime);
+            // Smoothly fade in and out with the sweep
+            sweepGain.gain.linearRampToValueAtTime(0.04, audioCtx.currentTime + 5);
+            sweepGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 10);
+
+            sweepOsc.connect(sweepGain);
+            sweepGain.connect(masterGain);
+            sweepOsc.start();
+
+            // ---- Record Video & Audio ----
+            const videoStream = renderer.domElement.captureStream(30);
+
+            // Combine video and audio tracks
+            const combinedStream = new MediaStream([
+                ...videoStream.getTracks(),
+                ...dest.stream.getTracks()
+            ]);
+
+            let options: any = { mimeType: 'video/webm;codecs=vp9,opus', videoBitsPerSecond: 8000000 };
+            if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                // Fallback if specific codecs are not supported
+                options = { mimeType: 'video/webm', videoBitsPerSecond: 8000000 };
+            }
+
+            const mediaRecorder = new MediaRecorder(combinedStream, options);
+            const chunks: Blob[] = [];
+
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) chunks.push(e.data);
+            };
+
+            mediaRecorder.onstop = () => {
+                const blob = new Blob(chunks, { type: 'video/webm' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `${user.username}-seismic-card.webm`;
+                a.click();
+
+                // Cleanup audio
+                if (audioSource) {
+                    audioSource.stop();
+                    audioSource.disconnect();
+                }
+                sweepOsc.stop();
+                audioCtx.close();
+
+                renderer.dispose();
+                geometry.dispose();
+                frontMat.dispose();
+                darkMat.dispose();
+                texture.dispose();
+                setIsRecording(false);
+            };
+
+            mediaRecorder.start();
+
+            // Render loop: 10 seconds @ 30fps
+            const totalFrames = 300;
+            let frame = 0;
+
+            const renderLoop = () => {
+                if (frame > totalFrames) {
+                    mediaRecorder.stop();
+                    return;
+                }
+                const progress = frame / totalFrames;
+                const angle = progress * Math.PI * 2;
+
+                // Rotates from -deg to +deg and back
+                mesh.rotation.y = Math.sin(angle) * 0.3; // Approx 17 degrees
+                mesh.rotation.x = Math.sin(angle * 2) * 0.05; // Slight secondary bobble
+
+                // Move the light slightly opposite to create a dynamic glare sweep
+                pointLight.position.x = Math.sin(angle * 2) * 200;
+                pointLight.position.y = Math.cos(angle) * 100 + 50;
+
+                renderer.render(scene, camera);
+                frame++;
+                requestAnimationFrame(renderLoop);
+            };
+
+            renderLoop();
+
+        } catch (err) {
+            console.error('Failed to create video:', err);
+            setIsRecording(false);
+        }
+    };
+
     return (
-        <div style={{ maxWidth: 600, margin: '0 auto' }}>
-            {/* Canvas */}
+        <div style={{ maxWidth: 600, margin: '0 auto', perspective: 1200 }}>
+            <style>{`
+                @keyframes card-tilt-preview {
+                    0% { transform: rotateY(-8deg) rotateX(2deg); }
+                    100% { transform: rotateY(8deg) rotateX(-2deg); }
+                }
+            `}</style>
+
+            {/* Canvas Container */}
             <div style={{
                 borderRadius: 16,
-                overflow: 'hidden',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                transformStyle: 'preserve-3d',
+                animation: 'card-tilt-preview 3s ease-in-out infinite alternate',
+                boxShadow: '0 20px 50px rgba(0,0,0,0.6), 0 0 20px rgba(166, 146, 77, 0.1)',
             }}>
                 <canvas
                     ref={canvasRef}
@@ -509,12 +755,12 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
             {ready && (
                 <div style={{
                     display: 'grid',
-                    gridTemplateColumns: '1fr 1fr 1fr',
+                    gridTemplateColumns: '1fr 1fr',
                     gap: 10,
-                    marginTop: 14,
+                    marginTop: 24,
                 }}>
                     <button
-                        onClick={handleDownload}
+                        onClick={handleDownloadImage}
                         className="btn btn-secondary"
                         style={{
                             display: 'flex',
@@ -578,6 +824,34 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
                             <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                         </svg>
                         Share on X
+                    </button>
+
+                    <button
+                        onClick={handleDownloadVideo}
+                        disabled={isRecording}
+                        className="btn btn-secondary"
+                        style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            gap: 6,
+                            padding: '14px 10px',
+                            fontSize: '0.8rem',
+                            cursor: isRecording ? 'wait' : 'pointer',
+                            backgroundColor: isRecording ? '#1a1a1a' : '',
+                            color: isRecording ? '#888' : ''
+                        }}
+                    >
+                        {isRecording ? (
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin">
+                                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                            </svg>
+                        ) : (
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <polygon points="5 3 19 12 5 21 5 3" />
+                            </svg>
+                        )}
+                        {isRecording ? 'Rendering...' : 'Save as Video'}
                     </button>
                 </div>
             )}
