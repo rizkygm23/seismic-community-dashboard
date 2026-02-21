@@ -1,7 +1,22 @@
 import React, { forwardRef } from 'react';
 import './GlareHover.css';
 
-const GlareHover = forwardRef(({
+interface GlareHoverProps extends React.HTMLAttributes<HTMLDivElement> {
+  width?: string | number;
+  height?: string | number;
+  background?: string;
+  borderRadius?: string | number;
+  borderColor?: string;
+  children?: React.ReactNode;
+  glareColor?: string;
+  glareOpacity?: number;
+  glareAngle?: number;
+  glareSize?: number;
+  transitionDuration?: number;
+  playOnce?: boolean;
+}
+
+const GlareHover = forwardRef<HTMLDivElement, GlareHoverProps>(({
   width = '500px',
   height = '500px',
   background = '#000',
