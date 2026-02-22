@@ -560,18 +560,32 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
             // The extrude geometry is created from z=0 to z=depth. Let's center it.
             geometry.translate(0, 0, -3);
 
-            // Add lighting for realistic glare
+            // Main ambient light for baseline brightness
             const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
             scene.add(ambientLight);
 
-            const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
-            directionalLight.position.set(0, 50, 200);
-            scene.add(directionalLight);
+            // Add directional lights for broad reflections across the surface
+            const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight1.position.set(-100, 100, 200);
+            scene.add(dirLight1);
 
-            // Add a point light to simulate a strong highlight reflection (the glare)
-            const pointLight = new THREE.PointLight(0xffffff, 2, 800);
-            pointLight.position.set(100, 100, 150);
-            scene.add(pointLight);
+            const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.6);
+            dirLight2.position.set(100, -50, 200);
+            scene.add(dirLight2);
+
+            // Add multiple PointLights to spread the highlight dynamically and simulate a glossy "sheen"
+            const lightRefRef1 = new THREE.PointLight(0xffffff, 2.0, 1000);
+            const lightRefRef2 = new THREE.PointLight(0xffffff, 1.5, 1000);
+            const lightRefRef3 = new THREE.PointLight(0xffffff, 1.0, 1000);
+
+            // Start them at a default position
+            lightRefRef1.position.set(0, 0, 100);
+            lightRefRef2.position.set(0, 0, 150);
+            lightRefRef3.position.set(0, 0, 120);
+
+            scene.add(lightRefRef1);
+            scene.add(lightRefRef2);
+            scene.add(lightRefRef3);
 
             // ExtrudeGeometry uses material index 0 for faces (front/back), index 1 for sides (extrusion+bevel)
             // We use MeshStandardMaterial to react to light
@@ -582,8 +596,8 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
             });
             const frontMat = new THREE.MeshStandardMaterial({
                 map: texture,
-                roughness: 0.2, // Low roughness for shiny/glare effect
-                metalness: 0.1,
+                roughness: 0.1,    // Glossy but slightly diffused perfectly spreads light without spotting it
+                metalness: 0.4,    // Gives it that metallic 'card' core base reflectance
             });
 
             const materials = [frontMat, darkMat];
@@ -652,9 +666,15 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
                 ...dest.stream.getTracks()
             ]);
 
-            let options: any = { mimeType: 'video/webm;codecs=vp9,opus', videoBitsPerSecond: 8000000 };
+            let options: any = { mimeType: 'video/mp4;codecs=avc1,mp4a.40.2', videoBitsPerSecond: 8000000 };
             if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-                // Fallback if specific codecs are not supported
+                options = { mimeType: 'video/mp4', videoBitsPerSecond: 8000000 };
+            }
+            if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                // Fallback to webm if mp4 is not supported
+                options = { mimeType: 'video/webm;codecs=vp9,opus', videoBitsPerSecond: 8000000 };
+            }
+            if (!MediaRecorder.isTypeSupported(options.mimeType)) {
                 options = { mimeType: 'video/webm', videoBitsPerSecond: 8000000 };
             }
 
@@ -666,11 +686,15 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
             };
 
             mediaRecorder.onstop = () => {
-                const blob = new Blob(chunks, { type: 'video/webm' });
+                const isMp4 = mediaRecorder.mimeType.includes('mp4');
+                const blobType = isMp4 ? 'video/mp4' : 'video/webm';
+                const extension = isMp4 ? 'mp4' : 'webm';
+
+                const blob = new Blob(chunks, { type: blobType });
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `${user.username}-seismic-card.webm`;
+                a.download = `${user.username}-seismic-card.${extension}`;
                 a.click();
 
                 // Cleanup audio
@@ -707,9 +731,16 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
                 mesh.rotation.y = Math.sin(angle) * 0.3; // Approx 17 degrees
                 mesh.rotation.x = Math.sin(angle * 2) * 0.05; // Slight secondary bobble
 
-                // Move the light slightly opposite to create a dynamic glare sweep
-                pointLight.position.x = Math.sin(angle * 2) * 200;
-                pointLight.position.y = Math.cos(angle) * 100 + 50;
+                // Move the three lights in separate broad sweeping motions
+                // This creates a broad, dancing light pattern on the surface that mimics premium foil cards
+                lightRefRef1.position.x = Math.sin(angle) * 400;
+                lightRefRef1.position.y = Math.cos(angle * 1.5) * 200;
+
+                lightRefRef2.position.x = Math.cos(angle * 1.2) * 350;
+                lightRefRef2.position.y = Math.sin(angle * 0.8) * 250;
+
+                lightRefRef3.position.x = Math.sin(angle * 0.5) * 450;
+                lightRefRef3.position.y = Math.sin(angle * 2) * -150;
 
                 renderer.render(scene, camera);
                 frame++;
