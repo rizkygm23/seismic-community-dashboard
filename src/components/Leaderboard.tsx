@@ -124,6 +124,7 @@ export default function Leaderboard() {
                     last_message_date: user.last_message_date,
                     region: user.region || null,
                     is_bot: false,
+                    is_learned: false,
                     badgeCount: user.badgeCount,
                     rank: start + index + 1, // This is the rank in the BADGE leaderboard
                 };

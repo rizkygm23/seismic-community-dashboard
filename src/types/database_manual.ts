@@ -58,6 +58,7 @@ export interface SeismicUser {
     last_message_date: string | null
     region: string | null
     is_bot: boolean
+    is_learned: boolean
     created_at?: string
     updated_at?: string
 }

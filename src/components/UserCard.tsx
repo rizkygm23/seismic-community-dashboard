@@ -298,7 +298,7 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                     </div>
                 </div>
 
-                {(achievements.length > 0 || getUserBadges(user).length > 0) && (
+                {(achievements.length > 0 || getUserBadges(user).length > 0 || user.is_learned) && (
                     <div style={{
                         display: 'flex',
                         flexWrap: 'wrap',
@@ -309,6 +309,32 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                         borderRadius: 'var(--border-radius-sm)',
                         border: `1px solid ${themeColor}30`
                     }}>
+                        {/* Seismic Scholar Badge - shown when is_learned is true */}
+                        {user.is_learned && (
+                            <span
+                                className="badge"
+                                title="Completed Seismic Learning Program"
+                                style={{
+                                    backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                                    color: '#38bdf8',
+                                    border: '1px solid rgba(56, 189, 248, 0.4)',
+                                    fontSize: '0.75rem',
+                                    padding: '4px 10px',
+                                    fontWeight: 600,
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 6,
+                                    cursor: 'help',
+                                    boxShadow: '0 0 8px rgba(56, 189, 248, 0.2)',
+                                }}
+                            >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+                                    <path d="M6 12v5c0 1.1 2.7 3 6 3s6-1.9 6-3v-5" />
+                                </svg>
+                                <span>Seismic Scholar</span>
+                            </span>
+                        )}
                         {achievements.map((ach, i) => (
                             <span
                                 key={`ach-${i}`}
@@ -369,6 +395,68 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                             );
                         })}
                     </div>
+                )}
+
+                {/* Learning CTA - shown when is_learned is false */}
+                {!user.is_learned && (
+                    <a
+                        href="https://learning.rizzgm.xyz"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 12,
+                            marginBottom: 16,
+                            padding: '14px 18px',
+                            background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%)',
+                            borderRadius: 'var(--border-radius)',
+                            border: '1px solid rgba(56, 189, 248, 0.3)',
+                            textDecoration: 'none',
+                            color: 'var(--seismic-white)',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s ease',
+                            position: 'relative',
+                            overflow: 'hidden',
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.border = '1px solid rgba(56, 189, 248, 0.6)';
+                            e.currentTarget.style.boxShadow = '0 0 20px rgba(56, 189, 248, 0.15)';
+                            e.currentTarget.style.transform = 'translateY(-1px)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.border = '1px solid rgba(56, 189, 248, 0.3)';
+                            e.currentTarget.style.boxShadow = 'none';
+                            e.currentTarget.style.transform = 'translateY(0)';
+                        }}
+                    >
+                        <div style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: '50%',
+                            background: 'rgba(56, 189, 248, 0.15)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0,
+                        }}>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
+                                <path d="M6 12v5c0 1.1 2.7 3 6 3s6-1.9 6-3v-5" />
+                            </svg>
+                        </div>
+                        <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: '0.875rem', fontWeight: 600, marginBottom: 2 }}>
+                                Learn About Seismic
+                            </div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--seismic-gray-400)' }}>
+                                Complete the learning module and earn the <span style={{ color: '#38bdf8', fontWeight: 500 }}>Seismic Scholar</span> badge
+                            </div>
+                        </div>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--seismic-gray-500)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                            <polyline points="9 18 15 12 9 6" />
+                        </svg>
+                    </a>
                 )}
 
                 <div className="grid-stats" style={{
