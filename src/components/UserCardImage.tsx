@@ -1059,7 +1059,7 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
                                 const text = `Just minted my Shielded Seismic Discord Stat NFT on Seismic Testnet! 🚀\n\nTx Hash:\n${explorerUrl}\n\nMint Here : https://seismic.rizzgm.xyz\n\nDecrypt your NFT traits here: https://decrypt.rizzgm.xyz\n\n@SeismicSys #privacy #seismic #testnet`;
                                 window.open(
                                     `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,
-                                    '_blank'    
+                                    '_blank'
                                 );
                                 return;
                             }
@@ -1121,6 +1121,19 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
 
                     {/* Mint NFT Section */}
                     <div style={{ gridColumn: '1 / -1', marginTop: 8 }}>
+                        <div style={{
+                            fontSize: '0.8rem',
+                            color: '#fbbf24',
+                            background: 'rgba(251, 191, 36, 0.1)',
+                            padding: '10px',
+                            borderRadius: '8px',
+                            border: '1px solid rgba(251, 191, 36, 0.2)',
+                            textAlign: 'center',
+                            marginBottom: '12px'
+                        }}>
+                            ⚠️ <strong>Caution:</strong> This is a playground project. Please use a <strong>burn wallet</strong> for your safety and privacy.
+                        </div>
+
                         {!isConnected ? (
                             <div style={{
                                 display: 'flex',
@@ -1143,18 +1156,6 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
                                 flexDirection: 'column',
                                 gap: 8,
                             }}>
-                                <div style={{
-                                    fontSize: '0.8rem',
-                                    color: '#fbbf24',
-                                    background: 'rgba(251, 191, 36, 0.1)',
-                                    padding: '10px',
-                                    borderRadius: '8px',
-                                    border: '1px solid rgba(251, 191, 36, 0.2)',
-                                    textAlign: 'center',
-                                    marginBottom: '4px'
-                                }}>
-                                    ⚠️ <strong>Caution:</strong> This is a playground project. Please use a <strong>burn wallet</strong> for your safety and privacy.
-                                </div>
                                 <button
                                     onClick={handleMint}
                                     disabled={isMinting}
