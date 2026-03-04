@@ -791,13 +791,13 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
                 const sweepOsc = audioCtx.createOscillator();
                 sweepOsc.type = 'sine';
                 sweepOsc.frequency.setValueAtTime(250, audioCtx.currentTime);
-                sweepOsc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 5);
-                sweepOsc.frequency.exponentialRampToValueAtTime(250, audioCtx.currentTime + 10);
+                sweepOsc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 1.5);
+                sweepOsc.frequency.exponentialRampToValueAtTime(250, audioCtx.currentTime + 3);
 
                 const sweepGain = audioCtx.createGain();
                 sweepGain.gain.setValueAtTime(0, audioCtx.currentTime);
-                sweepGain.gain.linearRampToValueAtTime(0.04, audioCtx.currentTime + 5);
-                sweepGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 10);
+                sweepGain.gain.linearRampToValueAtTime(0.04, audioCtx.currentTime + 1.5);
+                sweepGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 3);
 
                 sweepOsc.connect(sweepGain);
                 sweepGain.connect(masterGain);
@@ -851,8 +851,8 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
 
                 mediaRecorder.start();
 
-                // Render loop: 10 seconds @ 30fps
-                const totalFrames = 300;
+                // Render loop: 3 seconds @ 30fps
+                const totalFrames = 90;
                 let frame = 0;
 
                 const renderLoop = () => {
@@ -928,7 +928,7 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
             const imageUri = await uploadFileToIPFS(imageBlob, `${user.username}-card.png`);
 
             // 4. Generate video blob
-            setMintStatus('Generating NFT Video (10s)...');
+            setMintStatus('Generating NFT Video (3s)...');
             const videoBlob = await generateVideoBlob();
 
             // 5. Upload video to IPFS
