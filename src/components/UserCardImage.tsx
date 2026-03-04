@@ -5,6 +5,170 @@ import { SeismicUser } from '@/types/database_manual';
 import { MAGNITUDE_COLORS, DEFAULT_THEME_COLOR } from '@/lib/constants';
 import { getHighestMagnitudeRole } from '@/lib/roleUtils';
 import { getUserBadges } from '@/lib/badgeUtils';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { useAccount, useBalance } from 'wagmi';
+import { useShieldedWallet } from 'seismic-react';
+import { shieldedWriteContract } from 'seismic-viem';
+import { SEISMIC_DISCORD_STAT_ABI } from '@/lib/abi';
+import { uploadMetadataToIPFS, uploadFileToIPFS } from '@/lib/pinata';
+import { formatEther } from 'viem';
+
+const CONTRACT_ADDRESS = "0x143BF3D6F430C1C993E296A424a551EB29B6E4a5";
+
+// Custom Seismic Connect Button that handles balance display gracefully
+function SeismicConnectButton() {
+    const { address, isConnected, chain } = useAccount();
+    const { data: balanceData, isError: balanceError, isLoading: balanceLoading } = useBalance({
+        address: address,
+        query: {
+            enabled: !!address && isConnected,
+        }
+    });
+
+    // Format balance safely - prevent NaN
+    const formattedBalance = (() => {
+        if (balanceLoading) return '...';
+        if (balanceError || !balanceData) return '0';
+        try {
+            const raw = formatEther(balanceData.value);
+            const num = parseFloat(raw);
+            if (isNaN(num)) return '0';
+            return num.toFixed(4);
+        } catch {
+            return '0';
+        }
+    })();
+
+    return (
+        <ConnectButton.Custom>
+            {({
+                account,
+                chain: rkChain,
+                openAccountModal,
+                openChainModal,
+                openConnectModal,
+                mounted,
+            }) => {
+                const ready = mounted;
+                const connected = ready && account && rkChain;
+
+                return (
+                    <div
+                        {...(!ready && {
+                            'aria-hidden': true,
+                            style: {
+                                opacity: 0,
+                                pointerEvents: 'none' as const,
+                                userSelect: 'none' as const,
+                            },
+                        })}
+                    >
+                        {(() => {
+                            if (!connected) {
+                                return (
+                                    <button
+                                        onClick={openConnectModal}
+                                        type="button"
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 8,
+                                            padding: '10px 18px',
+                                            fontSize: '0.875rem',
+                                            fontWeight: 600,
+                                            color: '#fff',
+                                            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                                            border: 'none',
+                                            borderRadius: 12,
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease',
+                                        }}
+                                    >
+                                        🔗 Connect Wallet
+                                    </button>
+                                );
+                            }
+
+                            if (rkChain.unsupported) {
+                                return (
+                                    <button
+                                        onClick={openChainModal}
+                                        type="button"
+                                        style={{
+                                            padding: '10px 18px',
+                                            fontSize: '0.875rem',
+                                            fontWeight: 600,
+                                            color: '#fff',
+                                            background: '#ef4444',
+                                            border: 'none',
+                                            borderRadius: 12,
+                                            cursor: 'pointer',
+                                        }}
+                                    >
+                                        ⚠️ Wrong Network
+                                    </button>
+                                );
+                            }
+
+                            return (
+                                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                    <button
+                                        onClick={openChainModal}
+                                        type="button"
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 6,
+                                            padding: '8px 12px',
+                                            fontSize: '0.8rem',
+                                            fontWeight: 500,
+                                            color: '#d1d5db',
+                                            background: 'rgba(255,255,255,0.05)',
+                                            border: '1px solid rgba(255,255,255,0.1)',
+                                            borderRadius: 10,
+                                            cursor: 'pointer',
+                                        }}
+                                    >
+                                        {rkChain.hasIcon && rkChain.iconUrl && (
+                                            <img
+                                                alt={rkChain.name ?? 'Chain'}
+                                                src={rkChain.iconUrl}
+                                                style={{ width: 16, height: 16, borderRadius: 999 }}
+                                            />
+                                        )}
+                                        {rkChain.name ?? 'Seismic'}
+                                    </button>
+
+                                    <button
+                                        onClick={openAccountModal}
+                                        type="button"
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 6,
+                                            padding: '8px 12px',
+                                            fontSize: '0.8rem',
+                                            fontWeight: 500,
+                                            color: '#d1d5db',
+                                            background: 'rgba(255,255,255,0.05)',
+                                            border: '1px solid rgba(255,255,255,0.1)',
+                                            borderRadius: 10,
+                                            cursor: 'pointer',
+                                        }}
+                                    >
+                                        {formattedBalance} ETH
+                                        <span style={{ color: '#9ca3af' }}>|</span>
+                                        {account.displayName}
+                                    </button>
+                                </div>
+                            );
+                        })()}
+                    </div>
+                );
+            }}
+        </ConnectButton.Custom>
+    );
+}
 
 interface UserCardImageProps {
     user: SeismicUser;
@@ -444,6 +608,11 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
     const [ready, setReady] = useState(false);
     const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'error'>('idle');
     const [isRecording, setIsRecording] = useState(false);
+    const { address, isConnected, chain } = useAccount();
+    const [isMinting, setIsMinting] = useState(false);
+    const [mintStatus, setMintStatus] = useState('');
+    const { walletClient } = useShieldedWallet();
+    const [txHash, setTxHash] = useState<string | null>(null);
 
     const renderCard = useCallback(async () => {
         if (!canvasRef.current) return;
@@ -487,270 +656,323 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
         }
     };
 
+    const generateVideoBlob = (): Promise<Blob> => {
+        return new Promise(async (resolve, reject) => {
+            if (!canvasRef.current) return reject(new Error('No canvas'));
+            try {
+                const THREE = await import('three');
+
+                const vw = 600;
+                const vh = 380;
+
+                const scene = new THREE.Scene();
+                scene.background = new THREE.Color('#080808');
+
+                const camera = new THREE.PerspectiveCamera(45, vw / vh, 0.1, 1000);
+                camera.position.z = 520;
+
+                const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+                renderer.setPixelRatio(DPR);
+                renderer.setSize(vw, vh);
+
+                const texture = new THREE.CanvasTexture(canvasRef.current);
+                texture.colorSpace = THREE.SRGBColorSpace;
+                texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+                texture.minFilter = THREE.LinearFilter;
+
+                const radius = 20;
+                const roundedRectShape = new THREE.Shape();
+                const x = -vw / 2;
+                const y = -vh / 2;
+
+                roundedRectShape.moveTo(x, y + radius);
+                roundedRectShape.lineTo(x, y + vh - radius);
+                roundedRectShape.quadraticCurveTo(x, y + vh, x + radius, y + vh);
+                roundedRectShape.lineTo(x + vw - radius, y + vh);
+                roundedRectShape.quadraticCurveTo(x + vw, y + vh, x + vw, y + vh - radius);
+                roundedRectShape.lineTo(x + vw, y + radius);
+                roundedRectShape.quadraticCurveTo(x + vw, y, x + vw - radius, y);
+                roundedRectShape.lineTo(x + radius, y);
+                roundedRectShape.quadraticCurveTo(x, y, x, y + radius);
+
+                const extrusionSettings = {
+                    depth: 6,
+                    bevelEnabled: true,
+                    bevelSegments: 2,
+                    steps: 1,
+                    bevelSize: 0.5,
+                    bevelThickness: 0.5
+                };
+
+                const geometry = new THREE.ExtrudeGeometry(roundedRectShape, extrusionSettings);
+
+                const position = geometry.attributes.position;
+                const uv = geometry.attributes.uv;
+                for (let i = 0; i < uv.count; i++) {
+                    const px = position.getX(i);
+                    const py = position.getY(i);
+                    const u = (px + vw / 2) / vw;
+                    const v = (py + vh / 2) / vh;
+                    uv.setXY(i, u, v);
+                }
+
+                geometry.translate(0, 0, -3);
+
+                const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+                scene.add(ambientLight);
+
+                const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
+                dirLight1.position.set(-100, 100, 200);
+                scene.add(dirLight1);
+
+                const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.6);
+                dirLight2.position.set(100, -50, 200);
+                scene.add(dirLight2);
+
+                const lightRefRef1 = new THREE.PointLight(0xffffff, 2.0, 1000);
+                const lightRefRef2 = new THREE.PointLight(0xffffff, 1.5, 1000);
+                const lightRefRef3 = new THREE.PointLight(0xffffff, 1.0, 1000);
+
+                lightRefRef1.position.set(0, 0, 100);
+                lightRefRef2.position.set(0, 0, 150);
+                lightRefRef3.position.set(0, 0, 120);
+
+                scene.add(lightRefRef1);
+                scene.add(lightRefRef2);
+                scene.add(lightRefRef3);
+
+                const darkMat = new THREE.MeshStandardMaterial({
+                    color: 0x111111,
+                    roughness: 0.7,
+                    metalness: 0.3
+                });
+                const frontMat = new THREE.MeshStandardMaterial({
+                    map: texture,
+                    roughness: 0.1,
+                    metalness: 0.4,
+                });
+
+                const materials = [frontMat, darkMat];
+                const mesh = new THREE.Mesh(geometry, materials);
+                scene.add(mesh);
+
+                // ---- Audio Generation ----
+                const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+                const audioCtx = new AudioContextClass();
+                const dest = audioCtx.createMediaStreamDestination();
+
+                const masterGain = audioCtx.createGain();
+                masterGain.gain.value = 0.5;
+
+                const filter = audioCtx.createBiquadFilter();
+                filter.type = 'lowpass';
+                filter.frequency.value = 1500;
+                filter.connect(dest);
+                masterGain.connect(filter);
+
+                let audioSource: AudioBufferSourceNode | null = null;
+
+                try {
+                    const audioRes = await fetch('/bgm-432hz.mp3');
+                    if (audioRes.ok) {
+                        const audioData = await audioRes.arrayBuffer();
+                        const audioBuffer = await audioCtx.decodeAudioData(audioData);
+                        audioSource = audioCtx.createBufferSource();
+                        audioSource.buffer = audioBuffer;
+                        audioSource.connect(masterGain);
+                        audioSource.start();
+                    } else {
+                        console.warn('Could not load BGM file.');
+                    }
+                } catch (audioErr) {
+                    console.error('Error loading audio file:', audioErr);
+                }
+
+                const sweepOsc = audioCtx.createOscillator();
+                sweepOsc.type = 'sine';
+                sweepOsc.frequency.setValueAtTime(250, audioCtx.currentTime);
+                sweepOsc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 5);
+                sweepOsc.frequency.exponentialRampToValueAtTime(250, audioCtx.currentTime + 10);
+
+                const sweepGain = audioCtx.createGain();
+                sweepGain.gain.setValueAtTime(0, audioCtx.currentTime);
+                sweepGain.gain.linearRampToValueAtTime(0.04, audioCtx.currentTime + 5);
+                sweepGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 10);
+
+                sweepOsc.connect(sweepGain);
+                sweepGain.connect(masterGain);
+                sweepOsc.start();
+
+                // ---- Record Video & Audio ----
+                const videoStream = renderer.domElement.captureStream(30);
+                const combinedStream = new MediaStream([
+                    ...videoStream.getTracks(),
+                    ...dest.stream.getTracks()
+                ]);
+
+                let options: any = { mimeType: 'video/mp4;codecs=avc1,mp4a.40.2', videoBitsPerSecond: 8000000 };
+                if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                    options = { mimeType: 'video/mp4', videoBitsPerSecond: 8000000 };
+                }
+                if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                    options = { mimeType: 'video/webm;codecs=vp9,opus', videoBitsPerSecond: 8000000 };
+                }
+                if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                    options = { mimeType: 'video/webm', videoBitsPerSecond: 8000000 };
+                }
+
+                const mediaRecorder = new MediaRecorder(combinedStream, options);
+                const chunks: Blob[] = [];
+
+                mediaRecorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) chunks.push(e.data);
+                };
+
+                mediaRecorder.onstop = () => {
+                    const isMp4 = mediaRecorder.mimeType.includes('mp4');
+                    const blobType = isMp4 ? 'video/mp4' : 'video/webm';
+                    const blob = new Blob(chunks, { type: blobType });
+
+                    // Cleanup
+                    if (audioSource) {
+                        audioSource.stop();
+                        audioSource.disconnect();
+                    }
+                    sweepOsc.stop();
+                    audioCtx.close();
+                    renderer.dispose();
+                    geometry.dispose();
+                    frontMat.dispose();
+                    darkMat.dispose();
+                    texture.dispose();
+
+                    resolve(blob);
+                };
+
+                mediaRecorder.start();
+
+                // Render loop: 10 seconds @ 30fps
+                const totalFrames = 300;
+                let frame = 0;
+
+                const renderLoop = () => {
+                    if (frame > totalFrames) {
+                        mediaRecorder.stop();
+                        return;
+                    }
+                    const progress = frame / totalFrames;
+                    const angle = progress * Math.PI * 2;
+
+                    mesh.rotation.y = Math.sin(angle) * 0.3;
+                    mesh.rotation.x = Math.sin(angle * 2) * 0.05;
+
+                    lightRefRef1.position.x = Math.sin(angle) * 400;
+                    lightRefRef1.position.y = Math.cos(angle * 1.5) * 200;
+                    lightRefRef2.position.x = Math.cos(angle * 1.2) * 350;
+                    lightRefRef2.position.y = Math.sin(angle * 0.8) * 250;
+                    lightRefRef3.position.x = Math.sin(angle * 0.5) * 450;
+                    lightRefRef3.position.y = Math.sin(angle * 2) * -150;
+
+                    renderer.render(scene, camera);
+                    frame++;
+                    requestAnimationFrame(renderLoop);
+                };
+
+                renderLoop();
+
+            } catch (err) {
+                reject(err);
+            }
+        });
+    };
+
     const handleDownloadVideo = async () => {
         if (!canvasRef.current || isRecording) return;
         setIsRecording(true);
         try {
-            const THREE = await import('three');
-
-            const vw = 600;
-            const vh = 380;
-
-            const scene = new THREE.Scene();
-            // Dark elegant background for the video
-            scene.background = new THREE.Color('#080808');
-
-            // Find perfect distance to fit the card
-            const camera = new THREE.PerspectiveCamera(45, vw / vh, 0.1, 1000);
-            camera.position.z = 520; // slightly padded 
-
-            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-            renderer.setPixelRatio(DPR); // Ensure high-resolution rendering
-            renderer.setSize(vw, vh);
-
-            const texture = new THREE.CanvasTexture(canvasRef.current);
-            texture.colorSpace = THREE.SRGBColorSpace;
-            texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-            texture.minFilter = THREE.LinearFilter;
-
-            // Re-create the card shape with a slight thickness and ROUNDED corners
-            const radius = 20; // Matches the 20px border radius from canvas stroke/fill
-            const roundedRectShape = new THREE.Shape();
-
-            // Draw a rounded rectangle centered at 0,0
-            const x = -vw / 2;
-            const y = -vh / 2;
-
-            roundedRectShape.moveTo(x, y + radius);
-            roundedRectShape.lineTo(x, y + vh - radius);
-            roundedRectShape.quadraticCurveTo(x, y + vh, x + radius, y + vh);
-            roundedRectShape.lineTo(x + vw - radius, y + vh);
-            roundedRectShape.quadraticCurveTo(x + vw, y + vh, x + vw, y + vh - radius);
-            roundedRectShape.lineTo(x + vw, y + radius);
-            roundedRectShape.quadraticCurveTo(x + vw, y, x + vw - radius, y);
-            roundedRectShape.lineTo(x + radius, y);
-            roundedRectShape.quadraticCurveTo(x, y, x, y + radius);
-
-            const extrusionSettings = {
-                depth: 6, // Thickness of the card
-                bevelEnabled: true,
-                bevelSegments: 2,
-                steps: 1,
-                bevelSize: 0.5,
-                bevelThickness: 0.5
-            };
-
-            const geometry = new THREE.ExtrudeGeometry(roundedRectShape, extrusionSettings);
-
-            // Fix UV mapping for the front/back faces of ExtrudeGeometry
-            const position = geometry.attributes.position;
-            const uv = geometry.attributes.uv;
-            for (let i = 0; i < uv.count; i++) {
-                const px = position.getX(i);
-                const py = position.getY(i);
-
-                // Map X from [-vw/2, vw/2] -> [0, 1]
-                const u = (px + vw / 2) / vw;
-                // Map Y from [-vh/2, vh/2] -> [0, 1]
-                const v = (py + vh / 2) / vh;
-
-                uv.setXY(i, u, v);
-            }
-
-            // The extrude geometry is created from z=0 to z=depth. Let's center it.
-            geometry.translate(0, 0, -3);
-
-            // Main ambient light for baseline brightness
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-            scene.add(ambientLight);
-
-            // Add directional lights for broad reflections across the surface
-            const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
-            dirLight1.position.set(-100, 100, 200);
-            scene.add(dirLight1);
-
-            const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.6);
-            dirLight2.position.set(100, -50, 200);
-            scene.add(dirLight2);
-
-            // Add multiple PointLights to spread the highlight dynamically and simulate a glossy "sheen"
-            const lightRefRef1 = new THREE.PointLight(0xffffff, 2.0, 1000);
-            const lightRefRef2 = new THREE.PointLight(0xffffff, 1.5, 1000);
-            const lightRefRef3 = new THREE.PointLight(0xffffff, 1.0, 1000);
-
-            // Start them at a default position
-            lightRefRef1.position.set(0, 0, 100);
-            lightRefRef2.position.set(0, 0, 150);
-            lightRefRef3.position.set(0, 0, 120);
-
-            scene.add(lightRefRef1);
-            scene.add(lightRefRef2);
-            scene.add(lightRefRef3);
-
-            // ExtrudeGeometry uses material index 0 for faces (front/back), index 1 for sides (extrusion+bevel)
-            // We use MeshStandardMaterial to react to light
-            const darkMat = new THREE.MeshStandardMaterial({
-                color: 0x111111,
-                roughness: 0.7,
-                metalness: 0.3
-            });
-            const frontMat = new THREE.MeshStandardMaterial({
-                map: texture,
-                roughness: 0.1,    // Glossy but slightly diffused perfectly spreads light without spotting it
-                metalness: 0.4,    // Gives it that metallic 'card' core base reflectance
-            });
-
-            const materials = [frontMat, darkMat];
-
-            const mesh = new THREE.Mesh(geometry, materials);
-            scene.add(mesh);
-
-            // ---- Audio Generation (MP3 + Sweep Glare) ----
-            const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-            const audioCtx = new AudioContextClass();
-            const dest = audioCtx.createMediaStreamDestination();
-
-            const masterGain = audioCtx.createGain();
-            masterGain.gain.value = 0.5; // Main volume
-
-            // Add a lowpass filter to make everything sound warmer and smoother
-            const filter = audioCtx.createBiquadFilter();
-            filter.type = 'lowpass';
-            filter.frequency.value = 1500;
-            filter.connect(dest);
-            masterGain.connect(filter);
-
-            let audioSource: AudioBufferSourceNode | null = null;
-
-            try {
-                // Fetch the bgm file from the public directory
-                const audioRes = await fetch('/bgm-432hz.mp3');
-                if (audioRes.ok) {
-                    const audioData = await audioRes.arrayBuffer();
-                    const audioBuffer = await audioCtx.decodeAudioData(audioData);
-
-                    audioSource = audioCtx.createBufferSource();
-                    audioSource.buffer = audioBuffer;
-                    audioSource.connect(masterGain);
-                    audioSource.start();
-                } else {
-                    console.warn('Could not load BGM file, falling back to silent or sweep only.');
-                }
-            } catch (err) {
-                console.error('Error loading audio file:', err);
-            }
-
-            // Glare sweep (Smooth and soft)
-            const sweepOsc = audioCtx.createOscillator();
-            sweepOsc.type = 'sine'; // Sine is much smoother than triangle
-            sweepOsc.frequency.setValueAtTime(250, audioCtx.currentTime);
-            sweepOsc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 5);
-            sweepOsc.frequency.exponentialRampToValueAtTime(250, audioCtx.currentTime + 10);
-
-            const sweepGain = audioCtx.createGain();
-            sweepGain.gain.setValueAtTime(0, audioCtx.currentTime);
-            // Smoothly fade in and out with the sweep
-            sweepGain.gain.linearRampToValueAtTime(0.04, audioCtx.currentTime + 5);
-            sweepGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 10);
-
-            sweepOsc.connect(sweepGain);
-            sweepGain.connect(masterGain);
-            sweepOsc.start();
-
-            // ---- Record Video & Audio ----
-            const videoStream = renderer.domElement.captureStream(30);
-
-            // Combine video and audio tracks
-            const combinedStream = new MediaStream([
-                ...videoStream.getTracks(),
-                ...dest.stream.getTracks()
-            ]);
-
-            let options: any = { mimeType: 'video/mp4;codecs=avc1,mp4a.40.2', videoBitsPerSecond: 8000000 };
-            if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-                options = { mimeType: 'video/mp4', videoBitsPerSecond: 8000000 };
-            }
-            if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-                // Fallback to webm if mp4 is not supported
-                options = { mimeType: 'video/webm;codecs=vp9,opus', videoBitsPerSecond: 8000000 };
-            }
-            if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-                options = { mimeType: 'video/webm', videoBitsPerSecond: 8000000 };
-            }
-
-            const mediaRecorder = new MediaRecorder(combinedStream, options);
-            const chunks: Blob[] = [];
-
-            mediaRecorder.ondataavailable = (e) => {
-                if (e.data.size > 0) chunks.push(e.data);
-            };
-
-            mediaRecorder.onstop = () => {
-                const isMp4 = mediaRecorder.mimeType.includes('mp4');
-                const blobType = isMp4 ? 'video/mp4' : 'video/webm';
-                const extension = isMp4 ? 'mp4' : 'webm';
-
-                const blob = new Blob(chunks, { type: blobType });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `${user.username}-seismic-card.${extension}`;
-                a.click();
-
-                // Cleanup audio
-                if (audioSource) {
-                    audioSource.stop();
-                    audioSource.disconnect();
-                }
-                sweepOsc.stop();
-                audioCtx.close();
-
-                renderer.dispose();
-                geometry.dispose();
-                frontMat.dispose();
-                darkMat.dispose();
-                texture.dispose();
-                setIsRecording(false);
-            };
-
-            mediaRecorder.start();
-
-            // Render loop: 10 seconds @ 30fps
-            const totalFrames = 300;
-            let frame = 0;
-
-            const renderLoop = () => {
-                if (frame > totalFrames) {
-                    mediaRecorder.stop();
-                    return;
-                }
-                const progress = frame / totalFrames;
-                const angle = progress * Math.PI * 2;
-
-                // Rotates from -deg to +deg and back
-                mesh.rotation.y = Math.sin(angle) * 0.3; // Approx 17 degrees
-                mesh.rotation.x = Math.sin(angle * 2) * 0.05; // Slight secondary bobble
-
-                // Move the three lights in separate broad sweeping motions
-                // This creates a broad, dancing light pattern on the surface that mimics premium foil cards
-                lightRefRef1.position.x = Math.sin(angle) * 400;
-                lightRefRef1.position.y = Math.cos(angle * 1.5) * 200;
-
-                lightRefRef2.position.x = Math.cos(angle * 1.2) * 350;
-                lightRefRef2.position.y = Math.sin(angle * 0.8) * 250;
-
-                lightRefRef3.position.x = Math.sin(angle * 0.5) * 450;
-                lightRefRef3.position.y = Math.sin(angle * 2) * -150;
-
-                renderer.render(scene, camera);
-                frame++;
-                requestAnimationFrame(renderLoop);
-            };
-
-            renderLoop();
-
+            const blob = await generateVideoBlob();
+            const extension = blob.type.includes('mp4') ? 'mp4' : 'webm';
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${user.username}-seismic-card.${extension}`;
+            a.click();
         } catch (err) {
             console.error('Failed to create video:', err);
+        } finally {
+            setIsRecording(false);
+        }
+    };
+
+    const handleMint = async () => {
+        if (!canvasRef.current || isRecording || isMinting || !isConnected || !address) return;
+        setIsMinting(true);
+        setIsRecording(true);
+        try {
+            // 1. Network check
+            if (chain?.id !== 5124) {
+                throw new Error("Wrong network! Please switch to Seismic Testnet.");
+            }
+
+            // 2. Generate image blob from canvas
+            setMintStatus('Generating Card Image...');
+            const imageBlob = await new Promise<Blob>((resolve, reject) => {
+                canvasRef.current!.toBlob(blob => {
+                    if (blob) resolve(blob);
+                    else reject(new Error('Failed to create blob'));
+                }, 'image/png');
+            });
+
+            // 3. Upload image to IPFS
+            setMintStatus('Uploading Image to IPFS...');
+            const imageUri = await uploadFileToIPFS(imageBlob, `${user.username}-card.png`);
+
+            // 4. Generate video blob
+            setMintStatus('Generating NFT Video (10s)...');
+            const videoBlob = await generateVideoBlob();
+
+            // 5. Upload video to IPFS
+            setMintStatus('Uploading Video to IPFS...');
+            const extension = videoBlob.type.includes('mp4') ? 'mp4' : 'webm';
+            const animationUrl = await uploadFileToIPFS(videoBlob, `${user.username}-card.${extension}`);
+
+            // 6. Create and upload metadata
+            setMintStatus('Uploading Metadata...');
+            const mag = getMagnitude(user.roles);
+            const metadataTemplate = {
+                name: `Seismic Discord Stat - ${user.username}`,
+                description: "Encrypted Shielded NFT representing a user's Discord statistics on Seismic Network",
+                image: imageUri,
+                animation_url: animationUrl,
+            };
+            const tokenURI = await uploadMetadataToIPFS(metadataTemplate);
+
+            // 7. Call shielded mint contract (mints to msg.sender, auto-burns previous NFT if exists)
+            setMintStatus('Confirm Mint in Wallet...');
+            if (!walletClient) throw new Error('Wallet not connected');
+            const hash = await shieldedWriteContract(walletClient, {
+                address: CONTRACT_ADDRESS as `0x${string}`,
+                abi: SEISMIC_DISCORD_STAT_ABI as any,
+                functionName: "mint",
+                args: [
+                    tokenURI,
+                    BigInt(user.art || 0),
+                    BigInt(user.tweet || 0),
+                    BigInt((user.general_chat || 0) + (user.devnet_chat || 0) + (user.report_chat || 0)),
+                    BigInt(Math.floor(mag || 0))
+                ],
+                gas: BigInt(5000000), // Hardcoded gas
+            } as any);
+            setTxHash(hash);
+
+            setMintStatus('✅ Mint Successful!');
+            setTimeout(() => setMintStatus(''), 5000);
+        } catch (err: any) {
+            console.error('Failed to mint:', err);
+            setMintStatus(`❌ ${err?.shortMessage || err?.message || 'Mint Failed'}`);
+            setTimeout(() => setMintStatus(''), 5000);
+        } finally {
+            setIsMinting(false);
             setIsRecording(false);
         }
     };
@@ -831,6 +1053,18 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
                     </button>
                     <button
                         onClick={() => {
+                            // Jika sudah berhasil mint, share tweet khusus mint + tx hash
+                            if (txHash) {
+                                const explorerUrl = `https://seismic-testnet.socialscan.io/tx/${txHash}`;
+                                const text = `Just minted my Shielded Seismic Discord Stat NFT on Seismic Testnet! 🚀\n\nTx Hash:\n${explorerUrl}\n\nMint Here : https://seismic.rizzgm.xyz\n\nDecrypt your NFT traits here: https://decrypt.rizzgm.xyz\n\n@SeismicSys #privacy #seismic #testnet`;
+                                window.open(
+                                    `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,
+                                    '_blank'    
+                                );
+                                return;
+                            }
+
+                            // Default: share stats card saja
                             const percentText = rankInfo ? ((rankInfo.totalUsers - rankInfo.totalRank) / rankInfo.totalUsers * 100).toFixed(2) : '';
                             const topBadge = rankInfo && (rankInfo.totalRank / rankInfo.totalUsers) <= 0.01 ? 'Top 1% Elite' : user.total_messages > 1000 ? 'Diamond' : 'Member';
 
@@ -859,7 +1093,7 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
 
                     <button
                         onClick={handleDownloadVideo}
-                        disabled={isRecording}
+                        disabled={isRecording || isMinting}
                         className="btn btn-secondary"
                         style={{
                             display: 'flex',
@@ -868,12 +1102,12 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
                             gap: 6,
                             padding: '14px 10px',
                             fontSize: '0.8rem',
-                            cursor: isRecording ? 'wait' : 'pointer',
-                            backgroundColor: isRecording ? '#1a1a1a' : '',
-                            color: isRecording ? '#888' : ''
+                            cursor: (isRecording || isMinting) ? 'wait' : 'pointer',
+                            backgroundColor: (isRecording || isMinting) ? '#1a1a1a' : '',
+                            color: (isRecording || isMinting) ? '#888' : ''
                         }}
                     >
-                        {isRecording ? (
+                        {isRecording && !isMinting ? (
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin">
                                 <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                             </svg>
@@ -882,8 +1116,192 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
                                 <polygon points="5 3 19 12 5 21 5 3" />
                             </svg>
                         )}
-                        {isRecording ? 'Rendering...' : 'Save as Video'}
+                        {isRecording && !isMinting ? 'Rendering...' : 'Save as Video'}
                     </button>
+
+                    {/* Mint NFT Section */}
+                    <div style={{ gridColumn: '1 / -1', marginTop: 8 }}>
+                        {!isConnected ? (
+                            <div style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                gap: 8,
+                                padding: '16px',
+                                background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1))',
+                                borderRadius: 12,
+                                border: '1px solid rgba(99, 102, 241, 0.3)',
+                            }}>
+                                <div style={{ fontSize: '0.85rem', color: '#a78bfa', fontWeight: 600, marginBottom: 4 }}>
+                                    🔗 Connect Wallet to Mint as NFT
+                                </div>
+                                <SeismicConnectButton />
+                            </div>
+                        ) : (
+                            <div style={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: 8,
+                            }}>
+                                <div style={{
+                                    fontSize: '0.8rem',
+                                    color: '#fbbf24',
+                                    background: 'rgba(251, 191, 36, 0.1)',
+                                    padding: '10px',
+                                    borderRadius: '8px',
+                                    border: '1px solid rgba(251, 191, 36, 0.2)',
+                                    textAlign: 'center',
+                                    marginBottom: '4px'
+                                }}>
+                                    ⚠️ <strong>Caution:</strong> This is a playground project. Please use a <strong>burn wallet</strong> for your safety and privacy.
+                                </div>
+                                <button
+                                    onClick={handleMint}
+                                    disabled={isMinting}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        gap: 10,
+                                        padding: '14px 20px',
+                                        fontSize: '0.95rem',
+                                        fontWeight: 600,
+                                        cursor: isMinting ? 'wait' : 'pointer',
+                                        width: '100%',
+                                        border: 'none',
+                                        borderRadius: 12,
+                                        color: '#161616', // Dark text on light background
+                                        background: (isMinting)
+                                            ? 'linear-gradient(135deg, #374151, #1f2937)'
+                                            : 'linear-gradient(135deg, #D4BB6E, #E3CE8C)', // Gold theme
+                                        boxShadow: (isMinting)
+                                            ? 'none'
+                                            : '0 4px 20px rgba(212, 187, 110, 0.4)',
+                                        transition: 'all 0.3s ease',
+                                        opacity: (isMinting) ? 0.7 : 1,
+                                    }}
+                                >
+                                    {isMinting ? (
+                                        <>
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin">
+                                                <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                                            </svg>
+                                            <span style={{ color: '#fff' }}>{mintStatus || 'Minting...'}</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M12 2L2 7l10 5 10-5-10-5z" />
+                                                <path d="M2 17l10 5 10-5" />
+                                                <path d="M2 12l10 5 10-5" />
+                                            </svg>
+                                            Mint Shielded NFT Daily
+                                        </>
+                                    )}
+                                </button>
+                                {mintStatus && !isMinting && (
+                                    <div style={{
+                                        textAlign: 'center',
+                                        fontSize: '0.8rem',
+                                        padding: '8px 12px',
+                                        borderRadius: 8,
+                                        background: mintStatus.includes('✅') ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
+                                        color: mintStatus.includes('✅') ? '#22c55e' : '#ef4444',
+                                        border: `1px solid ${mintStatus.includes('✅') ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                                    }}>
+                                        {mintStatus}
+                                    </div>
+                                )}
+                                {txHash && (
+                                    <div style={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: 12,
+                                        marginTop: 8,
+                                    }}>
+                                        <div style={{
+                                            fontSize: '0.8rem',
+                                            color: '#9ca3af',
+                                            textAlign: 'center',
+                                            wordBreak: 'break-all',
+                                            background: 'rgba(255, 255, 255, 0.03)',
+                                            padding: '10px',
+                                            borderRadius: '8px',
+                                        }}>
+                                            <div style={{ marginBottom: 4 }}>Transaction Hash:</div>
+                                            <a
+                                                href={`https://seismic-testnet.socialscan.io/tx/${txHash}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                style={{ color: '#D4BB6E', textDecoration: 'underline' }}
+                                            >
+                                                {String(txHash)}
+                                            </a>
+                                        </div>
+                                        <div style={{
+                                            fontSize: '0.85rem',
+                                            color: '#d1d5db',
+                                            textAlign: 'center',
+                                            background: 'rgba(212, 187, 110, 0.1)',
+                                            padding: '12px',
+                                            borderRadius: '8px',
+                                            border: '1px solid rgba(212, 187, 110, 0.2)',
+                                        }}>
+                                            ✨ <strong>Mint Successful!</strong>
+                                            <br />
+                                            You can view and decrypt your encrypted NFT traits at:<br />
+                                            <a
+                                                href="https://decrypt.rizzgm.xyz"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                style={{ color: '#E3CE8C', textDecoration: 'underline', fontWeight: 'bold', display: 'inline-block', marginTop: 4 }}
+                                            >
+                                                decrypt.rizzgm.xyz
+                                            </a>
+
+                                            <div style={{ marginTop: '16px' }}>
+                                                <a
+                                                    href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(`I just minted my Shielded NFT Daily on the @SeismicSystems Community Dashboard!\n\nView my transaction here: https://seismic-testnet.socialscan.io/tx/${txHash}\nIf you've been active in the discord, claim yours now at`)}&url=${encodeURIComponent('https://rizzgm.xyz')}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    style={{
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: '8px',
+                                                        background: '#000',
+                                                        color: '#fff',
+                                                        padding: '8px 16px',
+                                                        borderRadius: '24px',
+                                                        textDecoration: 'none',
+                                                        fontSize: '0.85rem',
+                                                        fontWeight: 600,
+                                                        border: '1px solid #333',
+                                                        transition: 'all 0.2s',
+                                                    }}
+                                                    onMouseEnter={(e) => {
+                                                        e.currentTarget.style.background = '#111';
+                                                        e.currentTarget.style.transform = 'translateY(-1px)';
+                                                    }}
+                                                    onMouseLeave={(e) => {
+                                                        e.currentTarget.style.background = '#000';
+                                                        e.currentTarget.style.transform = 'translateY(0)';
+                                                    }}
+                                                >
+                                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                                                    </svg>
+                                                    Share Mint on X
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                                <div style={{ textAlign: 'center', marginTop: 8 }}>
+                                    <SeismicConnectButton />
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
         </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { SeismicUser } from '@/types/database_manual';
 import UserCard from './UserCard';
@@ -10,6 +10,7 @@ import banList from '@/data/ban_list.json';
 
 export default function UserSearch() {
     const [user, setUser] = useState<User | null>(null);
+    const userIdRef = useRef<string | null>(null);
     const [dbUser, setDbUser] = useState<SeismicUser | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -27,6 +28,7 @@ export default function UserSearch() {
                     const { data, error } = await supabase.auth.getSession();
                     if (data.session) {
                         setUser(data.session.user);
+                        userIdRef.current = data.session.user.id;
                         await fetchDbUser(data.session.user);
                         // Clean URL
                         window.history.replaceState(null, '', window.location.pathname);
@@ -40,6 +42,7 @@ export default function UserSearch() {
                 const { data: { session } } = await supabase.auth.getSession();
                 if (session?.user) {
                     setUser(session.user);
+                    userIdRef.current = session.user.id;
                     await fetchDbUser(session.user);
                 }
             } catch (err) {
@@ -49,12 +52,17 @@ export default function UserSearch() {
             }
 
             // Listen for auth changes
-            const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+            const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
                 if (session?.user) {
-                    setUser(session.user);
-                    await fetchDbUser(session.user);
-                } else {
+                    // Fix stale closure issue by checking against ref instead of stale state
+                    if (userIdRef.current !== session.user.id) {
+                        setUser(session.user);
+                        userIdRef.current = session.user.id;
+                        await fetchDbUser(session.user);
+                    }
+                } else if (event === 'SIGNED_OUT' || !session?.user) {
                     setUser(null);
+                    userIdRef.current = null;
                     setDbUser(null);
                     setLoading(false);
                 }

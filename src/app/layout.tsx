@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
+import { Providers } from "@/providers";
 
 export const metadata: Metadata = {
   title: "Seismic Community Dashboard",
@@ -25,22 +26,24 @@ export default function RootLayout({
           src="https://datrica.live/analytics.js">
         </script>
       </head>
-      <body>
-        <Navbar />
-        <main style={{ minHeight: 'calc(100vh - 64px)' }}>
-          {children}
-        </main>
-        <footer style={{
-          borderTop: '1px solid var(--seismic-gray-800)',
-          padding: '24px 0',
-          marginTop: 48,
-        }}>
-          <div className="container text-center">
-            <p className="text-muted" style={{ fontSize: '0.875rem' }}>
-              Seismic Community Dashboard • Built with data from Discord
-            </p>
-          </div>
-        </footer>
+      <body suppressHydrationWarning>
+        <Providers>
+          <Navbar />
+          <main style={{ minHeight: 'calc(100vh - 64px)' }}>
+            {children}
+          </main>
+          <footer style={{
+            borderTop: '1px solid var(--seismic-gray-800)',
+            padding: '24px 0',
+            marginTop: 48,
+          }}>
+            <div className="container text-center">
+              <p className="text-muted" style={{ fontSize: '0.875rem' }}>
+                Seismic Community Dashboard • Built with data from Discord
+              </p>
+            </div>
+          </footer>
+        </Providers>
       </body>
     </html>
   );

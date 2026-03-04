@@ -219,6 +219,44 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
 
     return (
         <div style={{ maxWidth: 600, margin: '0 auto' }}>
+            {
+                !loading && rankInfo && (
+                    <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'flex-end' }}>
+                        <button
+                            onClick={() => setShowCardImage(true)}
+                            style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 8,
+                                padding: '10px 20px',
+                                background: 'rgba(255,255,255,0.06)',
+                                border: '1px solid var(--seismic-gray-700)',
+                                borderRadius: '12px',
+                                color: 'var(--seismic-gray-300)',
+                                cursor: 'pointer',
+                                fontSize: '0.9rem',
+                                transition: 'all 0.2s',
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                                e.currentTarget.style.transform = 'translateY(-2px)';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                                e.currentTarget.style.transform = 'translateY(0)';
+                            }}
+                            title="Generate shareable card image"
+                        >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                <circle cx="8.5" cy="8.5" r="1.5" />
+                                <polyline points="21 15 16 10 5 21" />
+                            </svg>
+                            Save as Image
+                        </button>
+                    </div>
+                )
+            }
             <GlareHover
                 ref={cardRef}
                 id="card-capture-target"
@@ -757,44 +795,6 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                     </div>
                 </div>
             </GlareHover>
-            {
-                !loading && rankInfo && (
-                    <div style={{ marginTop: 16, display: 'flex', justifyContent: 'center' }}>
-                        <button
-                            onClick={() => setShowCardImage(true)}
-                            style={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: 8,
-                                padding: '10px 20px',
-                                background: 'rgba(255,255,255,0.06)',
-                                border: '1px solid var(--seismic-gray-700)',
-                                borderRadius: '12px',
-                                color: 'var(--seismic-gray-300)',
-                                cursor: 'pointer',
-                                fontSize: '0.9rem',
-                                transition: 'all 0.2s',
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-                                e.currentTarget.style.transform = 'translateY(-2px)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
-                                e.currentTarget.style.transform = 'translateY(0)';
-                            }}
-                            title="Generate shareable card image"
-                        >
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-                                <circle cx="8.5" cy="8.5" r="1.5" />
-                                <polyline points="21 15 16 10 5 21" />
-                            </svg>
-                            Save as Image
-                        </button>
-                    </div>
-                )
-            }
 
             {/* Card Image Modal */}
             {
