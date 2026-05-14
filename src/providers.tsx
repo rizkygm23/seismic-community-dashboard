@@ -5,12 +5,17 @@ import { getDefaultConfig, RainbowKitProvider, darkTheme } from "@rainbow-me/rai
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { WagmiProvider } from "wagmi";
 import { ShieldedWalletProvider } from "seismic-react";
-import { seismicTestnet } from "seismic-react/rainbowkit";
+import { createSeismicDevnet } from "seismic-react/rainbowkit";
+
+const customSeismicTestnet = createSeismicDevnet({ 
+    nodeHost: 'testnet-1.seismictest.net',
+    explorerUrl: 'https://seismic-testnet.socialscan.io'
+});
 
 const config = getDefaultConfig({
     appName: "Seismic Community Dashboard",
     projectId: process.env.NEXT_PUBLIC_WALLETCONNECT_ID || "5f8fbc2e79eabdc4627b00fb86a8bfb5", // Recommended to change this to your Cloud WalletConnect ID
-    chains: [seismicTestnet],
+    chains: [customSeismicTestnet],
     ssr: true,
 });
 
