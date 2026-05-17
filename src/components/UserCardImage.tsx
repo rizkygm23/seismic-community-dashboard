@@ -13,7 +13,7 @@ import { SEISMIC_DISCORD_STAT_ABI } from '@/lib/abi';
 import { uploadMetadataToIPFS, uploadFileToIPFS } from '@/lib/pinata';
 import { formatEther } from 'viem';
 
-const CONTRACT_ADDRESS = "0x143BF3D6F430C1C993E296A424a551EB29B6E4a5";
+const CONTRACT_ADDRESS = "0xd5894c66Cbcbf87514B62a6BFEfb1a3c57E98544";
 
 // Custom Seismic Connect Button that handles balance display gracefully
 function SeismicConnectButton() {
