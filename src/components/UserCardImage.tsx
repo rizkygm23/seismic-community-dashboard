@@ -11,13 +11,13 @@ import { useShieldedWallet } from 'seismic-react';
 import { shieldedWriteContract } from 'seismic-viem';
 import { SEISMIC_DISCORD_STAT_ABI } from '@/lib/abi';
 import { uploadMetadataToIPFS, uploadFileToIPFS } from '@/lib/pinata';
-import { formatEther } from 'viem';
+import { formatEther, type Abi } from 'viem';
 
 const CONTRACT_ADDRESS = "0xd5894c66Cbcbf87514B62a6BFEfb1a3c57E98544";
 
 // Custom Seismic Connect Button that handles balance display gracefully
 function SeismicConnectButton() {
-    const { address, isConnected, chain } = useAccount();
+    const { address, isConnected } = useAccount();
     const { data: balanceData, isError: balanceError, isLoading: balanceLoading } = useBalance({
         address: address,
         query: {
@@ -185,6 +185,20 @@ interface UserCardImageProps {
 const W = 600;
 const H = 380;
 const DPR = 2; // 2x for retina
+const VIDEO_SCALE = 2;
+const VIDEO_FPS = 30;
+const VIDEO_DURATION_MS = 4500;
+const VIDEO_BITRATE = 12_000_000;
+
+const wait = (ms: number) => new Promise(resolve => window.setTimeout(resolve, ms));
+
+type WindowWithLegacyAudioContext = Window & typeof globalThis & {
+    webkitAudioContext?: typeof AudioContext;
+};
+
+type MintError = Error & {
+    shortMessage?: string;
+};
 
 function getMagnitude(roles: string[] | null): number {
     if (!roles) return 0;
@@ -217,6 +231,98 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
     ctx.arcTo(x, y + h, x, y, r);
     ctx.arcTo(x, y, x + w, y, r);
     ctx.closePath();
+}
+
+function hexToRgb(hex: string): [number, number, number] {
+    const normalized = hex.replace('#', '');
+    const value = normalized.length === 3
+        ? normalized.split('').map(char => char + char).join('')
+        : normalized.padEnd(6, '0').slice(0, 6);
+    const int = parseInt(value, 16);
+    return [(int >> 16) & 255, (int >> 8) & 255, int & 255];
+}
+
+function hexToRgba(hex: string, alpha: number) {
+    const [r, g, b] = hexToRgb(hex);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function createVideoBackgroundCanvas(themeColor: string) {
+    const canvas = document.createElement('canvas');
+    canvas.width = W * VIDEO_SCALE;
+    canvas.height = H * VIDEO_SCALE;
+
+    const ctx = canvas.getContext('2d')!;
+    const { width, height } = canvas;
+
+    const bg = ctx.createLinearGradient(0, 0, width, height);
+    bg.addColorStop(0, '#020204');
+    bg.addColorStop(0.48, '#101015');
+    bg.addColorStop(1, '#030305');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, width, height);
+
+    const accentGlow = ctx.createRadialGradient(width * 0.78, height * 0.18, 0, width * 0.78, height * 0.18, width * 0.45);
+    accentGlow.addColorStop(0, hexToRgba(themeColor, 0.36));
+    accentGlow.addColorStop(0.45, hexToRgba(themeColor, 0.08));
+    accentGlow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = accentGlow;
+    ctx.fillRect(0, 0, width, height);
+
+    const coolGlow = ctx.createRadialGradient(width * 0.1, height * 0.85, 0, width * 0.1, height * 0.85, width * 0.5);
+    coolGlow.addColorStop(0, 'rgba(56, 189, 248, 0.16)');
+    coolGlow.addColorStop(0.5, 'rgba(56, 189, 248, 0.04)');
+    coolGlow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = coolGlow;
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.globalAlpha = 0.16;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 18; i++) {
+        const y = ((i * 53) % height) + 8;
+        ctx.beginPath();
+        ctx.moveTo(-80, y);
+        ctx.lineTo(width + 80, y - height * 0.34);
+        ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    return canvas;
+}
+
+function createVideoGlowCanvas(themeColor: string) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 512;
+    canvas.height = 512;
+    const ctx = canvas.getContext('2d')!;
+
+    const gradient = ctx.createRadialGradient(256, 256, 0, 256, 256, 256);
+    gradient.addColorStop(0, hexToRgba(themeColor, 0.9));
+    gradient.addColorStop(0.45, hexToRgba(themeColor, 0.22));
+    gradient.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 512, 512);
+
+    return canvas;
+}
+
+function createVideoSweepCanvas(themeColor: string) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 256;
+    canvas.height = 1024;
+    const ctx = canvas.getContext('2d')!;
+
+    const gradient = ctx.createLinearGradient(0, 0, 256, 0);
+    gradient.addColorStop(0, 'rgba(255,255,255,0)');
+    gradient.addColorStop(0.42, 'rgba(255,255,255,0)');
+    gradient.addColorStop(0.5, 'rgba(255,255,255,0.82)');
+    gradient.addColorStop(0.58, hexToRgba(themeColor, 0.35));
+    gradient.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 256, 1024);
+
+    return canvas;
 }
 
 // Elegant Outline Badge
@@ -656,234 +762,360 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
         }
     };
 
-    const generateVideoBlob = (): Promise<Blob> => {
-        return new Promise(async (resolve, reject) => {
-            if (!canvasRef.current) return reject(new Error('No canvas'));
+    const generateVideoBlob = async (): Promise<Blob> => {
+        if (!canvasRef.current) throw new Error('No canvas');
+        if (typeof MediaRecorder === 'undefined') {
+            throw new Error('Video recording is not supported in this browser.');
+        }
+
+        const THREE = await import('three');
+        const mag = getMagnitude(user.roles);
+        const themeColor = MAGNITUDE_COLORS[Math.floor(mag)] || DEFAULT_THEME_COLOR;
+        const durationSec = VIDEO_DURATION_MS / 1000;
+        const frameInterval = 1000 / VIDEO_FPS;
+
+        const disposeQueue: Array<{ dispose: () => void }> = [];
+        let combinedStream: MediaStream | null = null;
+        let audioCtx: AudioContext | null = null;
+        let audioSource: AudioBufferSourceNode | null = null;
+        let sweepOsc: OscillatorNode | null = null;
+        let sparkleOsc: OscillatorNode | null = null;
+
+        const renderer = new THREE.WebGLRenderer({
+            antialias: true,
+            alpha: false,
+            preserveDrawingBuffer: true
+        });
+        renderer.setPixelRatio(1);
+        renderer.setSize(W * VIDEO_SCALE, H * VIDEO_SCALE, false);
+        renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+        const cleanup = () => {
+            combinedStream?.getTracks().forEach(track => track.stop());
+            try { audioSource?.stop(); } catch { }
+            try { sweepOsc?.stop(); } catch { }
+            try { sparkleOsc?.stop(); } catch { }
+            audioSource?.disconnect();
+            sweepOsc?.disconnect();
+            sparkleOsc?.disconnect();
+            if (audioCtx && audioCtx.state !== 'closed') {
+                void audioCtx.close();
+            }
+            disposeQueue.forEach(item => item.dispose());
+            renderer.dispose();
+        };
+
+        try {
+            const scene = new THREE.Scene();
+            scene.background = new THREE.Color('#020204');
+
+            const camera = new THREE.PerspectiveCamera(42, W / H, 0.1, 1200);
+            camera.position.set(0, 0, 540);
+
+            const backgroundTexture = new THREE.CanvasTexture(createVideoBackgroundCanvas(themeColor));
+            backgroundTexture.colorSpace = THREE.SRGBColorSpace;
+            const backgroundGeometry = new THREE.PlaneGeometry(900, 560);
+            const backgroundMaterial = new THREE.MeshBasicMaterial({ map: backgroundTexture });
+            const backgroundMesh = new THREE.Mesh(backgroundGeometry, backgroundMaterial);
+            backgroundMesh.position.z = -120;
+            scene.add(backgroundMesh);
+            disposeQueue.push(backgroundTexture, backgroundGeometry, backgroundMaterial);
+
+            const glowTexture = new THREE.CanvasTexture(createVideoGlowCanvas(themeColor));
+            glowTexture.colorSpace = THREE.SRGBColorSpace;
+            const glowMaterial = new THREE.SpriteMaterial({
+                map: glowTexture,
+                transparent: true,
+                opacity: 0.28,
+                depthWrite: false,
+                blending: THREE.AdditiveBlending
+            });
+            const glowSprite = new THREE.Sprite(glowMaterial);
+            glowSprite.scale.set(780, 780, 1);
+            glowSprite.position.set(120, 20, -70);
+            scene.add(glowSprite);
+            disposeQueue.push(glowTexture, glowMaterial);
+
+            const texture = new THREE.CanvasTexture(canvasRef.current);
+            texture.colorSpace = THREE.SRGBColorSpace;
+            texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+            texture.minFilter = THREE.LinearFilter;
+            texture.magFilter = THREE.LinearFilter;
+            texture.needsUpdate = true;
+            disposeQueue.push(texture);
+
+            const radius = 20;
+            const roundedRectShape = new THREE.Shape();
+            const x = -W / 2;
+            const y = -H / 2;
+
+            roundedRectShape.moveTo(x, y + radius);
+            roundedRectShape.lineTo(x, y + H - radius);
+            roundedRectShape.quadraticCurveTo(x, y + H, x + radius, y + H);
+            roundedRectShape.lineTo(x + W - radius, y + H);
+            roundedRectShape.quadraticCurveTo(x + W, y + H, x + W, y + H - radius);
+            roundedRectShape.lineTo(x + W, y + radius);
+            roundedRectShape.quadraticCurveTo(x + W, y, x + W - radius, y);
+            roundedRectShape.lineTo(x + radius, y);
+            roundedRectShape.quadraticCurveTo(x, y, x, y + radius);
+
+            const geometry = new THREE.ExtrudeGeometry(roundedRectShape, {
+                depth: 10,
+                bevelEnabled: true,
+                bevelSegments: 5,
+                steps: 1,
+                bevelSize: 1.6,
+                bevelThickness: 1.8,
+                curveSegments: 24
+            });
+            disposeQueue.push(geometry);
+
+            const position = geometry.attributes.position;
+            const uv = geometry.attributes.uv;
+            for (let i = 0; i < uv.count; i++) {
+                const px = position.getX(i);
+                const py = position.getY(i);
+                uv.setXY(i, (px + W / 2) / W, (py + H / 2) / H);
+            }
+            geometry.translate(0, 0, -5);
+            geometry.computeVertexNormals();
+
+            const ambientLight = new THREE.HemisphereLight(0xffffff, 0x08080b, 1.8);
+            scene.add(ambientLight);
+
+            const keyLight = new THREE.DirectionalLight(0xffffff, 1.8);
+            keyLight.position.set(-160, 170, 260);
+            scene.add(keyLight);
+
+            const rimLight = new THREE.DirectionalLight(themeColor, 2.6);
+            rimLight.position.set(260, 80, 180);
+            scene.add(rimLight);
+
+            const sparkleLight = new THREE.PointLight(0xffffff, 3.2, 900);
+            const accentLight = new THREE.PointLight(themeColor, 4.5, 900);
+            const coolLight = new THREE.PointLight(0x38bdf8, 2.6, 900);
+            scene.add(sparkleLight, accentLight, coolLight);
+
+            const edgeMaterial = new THREE.MeshStandardMaterial({
+                color: 0x0a0a0c,
+                roughness: 0.36,
+                metalness: 0.78
+            });
+            const frontMaterial = new THREE.MeshPhysicalMaterial({
+                map: texture,
+                roughness: 0.22,
+                metalness: 0.2,
+                clearcoat: 0.65,
+                clearcoatRoughness: 0.18
+            });
+            disposeQueue.push(edgeMaterial, frontMaterial);
+
+            const cardGroup = new THREE.Group();
+            const mesh = new THREE.Mesh(geometry, [frontMaterial, edgeMaterial]);
+            cardGroup.add(mesh);
+
+            const outlinePoints = roundedRectShape.getPoints(96).map(point => new THREE.Vector3(point.x, point.y, 6.2));
+            const outlineGeometry = new THREE.BufferGeometry().setFromPoints(outlinePoints);
+            const outlineMaterial = new THREE.LineBasicMaterial({
+                color: themeColor,
+                transparent: true,
+                opacity: 0.78
+            });
+            const outline = new THREE.LineLoop(outlineGeometry, outlineMaterial);
+            cardGroup.add(outline);
+            disposeQueue.push(outlineGeometry, outlineMaterial);
+
+            const sweepTexture = new THREE.CanvasTexture(createVideoSweepCanvas(themeColor));
+            sweepTexture.colorSpace = THREE.SRGBColorSpace;
+            const sweepGeometry = new THREE.PlaneGeometry(120, 520);
+            const sweepMaterial = new THREE.MeshBasicMaterial({
+                map: sweepTexture,
+                transparent: true,
+                opacity: 0,
+                depthWrite: false,
+                side: THREE.DoubleSide,
+                blending: THREE.AdditiveBlending
+            });
+            const sweepMesh = new THREE.Mesh(sweepGeometry, sweepMaterial);
+            sweepMesh.position.z = 7;
+            sweepMesh.rotation.z = -0.26;
+            cardGroup.add(sweepMesh);
+            disposeQueue.push(sweepTexture, sweepGeometry, sweepMaterial);
+
+            scene.add(cardGroup);
+
+            const AudioContextClass = window.AudioContext || (window as WindowWithLegacyAudioContext).webkitAudioContext;
+            if (!AudioContextClass) {
+                throw new Error('Audio recording is not supported in this browser.');
+            }
+            audioCtx = new AudioContextClass();
+            if (audioCtx.state === 'suspended') {
+                await audioCtx.resume();
+            }
+            const dest = audioCtx.createMediaStreamDestination();
+
+            const masterGain = audioCtx.createGain();
+            const filter = audioCtx.createBiquadFilter();
+            const compressor = audioCtx.createDynamicsCompressor();
+            filter.type = 'lowpass';
+            filter.frequency.value = 1800;
+            compressor.threshold.value = -24;
+            compressor.knee.value = 18;
+            compressor.ratio.value = 4;
+            compressor.attack.value = 0.01;
+            compressor.release.value = 0.18;
+
+            masterGain.connect(filter);
+            filter.connect(compressor);
+            compressor.connect(dest);
+
             try {
-                const THREE = await import('three');
+                const audioRes = await fetch('/bgm-432hz.mp3');
+                if (audioRes.ok) {
+                    const audioData = await audioRes.arrayBuffer();
+                    const audioBuffer = await audioCtx.decodeAudioData(audioData);
+                    audioSource = audioCtx.createBufferSource();
+                    audioSource.buffer = audioBuffer;
+                    audioSource.loop = audioBuffer.duration < durationSec;
+                    audioSource.connect(masterGain);
+                }
+            } catch (audioErr) {
+                console.error('Error loading audio file:', audioErr);
+            }
 
-                const vw = 600;
-                const vh = 380;
+            sweepOsc = audioCtx.createOscillator();
+            sweepOsc.type = 'sine';
+            const sweepGain = audioCtx.createGain();
+            sweepOsc.connect(sweepGain);
+            sweepGain.connect(masterGain);
 
-                const scene = new THREE.Scene();
-                scene.background = new THREE.Color('#080808');
+            sparkleOsc = audioCtx.createOscillator();
+            sparkleOsc.type = 'triangle';
+            const sparkleGain = audioCtx.createGain();
+            sparkleOsc.connect(sparkleGain);
+            sparkleGain.connect(masterGain);
 
-                const camera = new THREE.PerspectiveCamera(45, vw / vh, 0.1, 1000);
-                camera.position.z = 520;
+            const renderVideoFrame = (elapsedMs: number, captureTrack?: CanvasCaptureMediaStreamTrack) => {
+                const progress = Math.min(1, elapsedMs / VIDEO_DURATION_MS);
+                const angle = progress * Math.PI * 2;
+                const entrance = Math.min(1, progress / 0.16);
+                const easedEntrance = 1 - Math.pow(1 - entrance, 3);
 
-                const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
-                renderer.setPixelRatio(DPR);
-                renderer.setSize(vw, vh);
+                cardGroup.rotation.y = Math.sin(angle) * 0.25;
+                cardGroup.rotation.x = Math.sin(angle * 1.7) * 0.045 - 0.025;
+                cardGroup.rotation.z = Math.sin(angle * 0.8) * 0.012;
+                cardGroup.position.y = (1 - easedEntrance) * -28 + Math.sin(angle * 1.2) * 5;
+                cardGroup.scale.setScalar(0.92 + easedEntrance * 0.08);
 
-                const texture = new THREE.CanvasTexture(canvasRef.current);
-                texture.colorSpace = THREE.SRGBColorSpace;
-                texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-                texture.minFilter = THREE.LinearFilter;
+                sparkleLight.position.set(Math.sin(angle) * 360, Math.cos(angle * 1.4) * 185, 170);
+                accentLight.position.set(Math.cos(angle * 0.85) * 360, Math.sin(angle * 1.1) * 210, 210);
+                coolLight.position.set(Math.sin(angle * 1.35 + 1.2) * 420, Math.cos(angle * 0.7) * 220, 180);
 
-                const radius = 20;
-                const roundedRectShape = new THREE.Shape();
-                const x = -vw / 2;
-                const y = -vh / 2;
+                glowSprite.position.x = Math.cos(angle * 0.72) * 150;
+                glowSprite.position.y = Math.sin(angle * 0.55) * 80;
+                glowSprite.material.opacity = 0.22 + Math.sin(angle * 1.3) * 0.06;
 
-                roundedRectShape.moveTo(x, y + radius);
-                roundedRectShape.lineTo(x, y + vh - radius);
-                roundedRectShape.quadraticCurveTo(x, y + vh, x + radius, y + vh);
-                roundedRectShape.lineTo(x + vw - radius, y + vh);
-                roundedRectShape.quadraticCurveTo(x + vw, y + vh, x + vw, y + vh - radius);
-                roundedRectShape.lineTo(x + vw, y + radius);
-                roundedRectShape.quadraticCurveTo(x + vw, y, x + vw - radius, y);
-                roundedRectShape.lineTo(x + radius, y);
-                roundedRectShape.quadraticCurveTo(x, y, x, y + radius);
+                backgroundMesh.rotation.z = Math.sin(angle * 0.4) * 0.025;
+                backgroundMesh.scale.setScalar(1.03 + Math.sin(angle * 0.65) * 0.02);
 
-                const extrusionSettings = {
-                    depth: 6,
-                    bevelEnabled: true,
-                    bevelSegments: 2,
-                    steps: 1,
-                    bevelSize: 0.5,
-                    bevelThickness: 0.5
+                const sweepProgress = Math.min(1, Math.max(0, (progress - 0.18) / 0.64));
+                sweepMesh.position.x = -430 + sweepProgress * 860;
+                sweepMaterial.opacity = Math.sin(Math.PI * sweepProgress) * 0.45;
+
+                renderer.render(scene, camera);
+                captureTrack?.requestFrame();
+            };
+
+            renderVideoFrame(0);
+
+            const videoStream = renderer.domElement.captureStream(0);
+            const captureTrack = videoStream.getVideoTracks()[0] as CanvasCaptureMediaStreamTrack | undefined;
+            combinedStream = new MediaStream([
+                ...videoStream.getTracks(),
+                ...dest.stream.getTracks()
+            ]);
+
+            const optionCandidates: MediaRecorderOptions[] = [
+                { mimeType: 'video/mp4;codecs=avc1.42E01E,mp4a.40.2', videoBitsPerSecond: VIDEO_BITRATE, audioBitsPerSecond: 160000 },
+                { mimeType: 'video/mp4;codecs=h264,aac', videoBitsPerSecond: VIDEO_BITRATE, audioBitsPerSecond: 160000 },
+                { mimeType: 'video/mp4;codecs=avc1,mp4a.40.2', videoBitsPerSecond: VIDEO_BITRATE, audioBitsPerSecond: 160000 },
+                { mimeType: 'video/mp4', videoBitsPerSecond: VIDEO_BITRATE, audioBitsPerSecond: 160000 },
+                { mimeType: 'video/webm;codecs=vp9,opus', videoBitsPerSecond: VIDEO_BITRATE, audioBitsPerSecond: 160000 },
+                { mimeType: 'video/webm;codecs=vp8,opus', videoBitsPerSecond: VIDEO_BITRATE, audioBitsPerSecond: 160000 },
+                { mimeType: 'video/webm', videoBitsPerSecond: VIDEO_BITRATE, audioBitsPerSecond: 160000 }
+            ];
+            const options = optionCandidates.find(candidate => MediaRecorder.isTypeSupported(candidate.mimeType ?? ''))
+                ?? { videoBitsPerSecond: VIDEO_BITRATE, audioBitsPerSecond: 160000 };
+
+            const mediaRecorder = new MediaRecorder(combinedStream, options);
+            const chunks: Blob[] = [];
+
+            const recordingDone = new Promise<Blob>((resolve, reject) => {
+                mediaRecorder.ondataavailable = event => {
+                    if (event.data.size > 0) chunks.push(event.data);
                 };
-
-                const geometry = new THREE.ExtrudeGeometry(roundedRectShape, extrusionSettings);
-
-                const position = geometry.attributes.position;
-                const uv = geometry.attributes.uv;
-                for (let i = 0; i < uv.count; i++) {
-                    const px = position.getX(i);
-                    const py = position.getY(i);
-                    const u = (px + vw / 2) / vw;
-                    const v = (py + vh / 2) / vh;
-                    uv.setXY(i, u, v);
-                }
-
-                geometry.translate(0, 0, -3);
-
-                const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
-                scene.add(ambientLight);
-
-                const dirLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
-                dirLight1.position.set(-100, 100, 200);
-                scene.add(dirLight1);
-
-                const dirLight2 = new THREE.DirectionalLight(0xffffff, 0.6);
-                dirLight2.position.set(100, -50, 200);
-                scene.add(dirLight2);
-
-                const lightRefRef1 = new THREE.PointLight(0xffffff, 2.0, 1000);
-                const lightRefRef2 = new THREE.PointLight(0xffffff, 1.5, 1000);
-                const lightRefRef3 = new THREE.PointLight(0xffffff, 1.0, 1000);
-
-                lightRefRef1.position.set(0, 0, 100);
-                lightRefRef2.position.set(0, 0, 150);
-                lightRefRef3.position.set(0, 0, 120);
-
-                scene.add(lightRefRef1);
-                scene.add(lightRefRef2);
-                scene.add(lightRefRef3);
-
-                const darkMat = new THREE.MeshStandardMaterial({
-                    color: 0x111111,
-                    roughness: 0.7,
-                    metalness: 0.3
-                });
-                const frontMat = new THREE.MeshStandardMaterial({
-                    map: texture,
-                    roughness: 0.1,
-                    metalness: 0.4,
-                });
-
-                const materials = [frontMat, darkMat];
-                const mesh = new THREE.Mesh(geometry, materials);
-                scene.add(mesh);
-
-                // ---- Audio Generation ----
-                const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-                const audioCtx = new AudioContextClass();
-                const dest = audioCtx.createMediaStreamDestination();
-
-                const masterGain = audioCtx.createGain();
-                masterGain.gain.value = 0.5;
-
-                const filter = audioCtx.createBiquadFilter();
-                filter.type = 'lowpass';
-                filter.frequency.value = 1500;
-                filter.connect(dest);
-                masterGain.connect(filter);
-
-                let audioSource: AudioBufferSourceNode | null = null;
-
-                try {
-                    const audioRes = await fetch('/bgm-432hz.mp3');
-                    if (audioRes.ok) {
-                        const audioData = await audioRes.arrayBuffer();
-                        const audioBuffer = await audioCtx.decodeAudioData(audioData);
-                        audioSource = audioCtx.createBufferSource();
-                        audioSource.buffer = audioBuffer;
-                        audioSource.connect(masterGain);
-                        audioSource.start();
-                    } else {
-                        console.warn('Could not load BGM file.');
-                    }
-                } catch (audioErr) {
-                    console.error('Error loading audio file:', audioErr);
-                }
-
-                const sweepOsc = audioCtx.createOscillator();
-                sweepOsc.type = 'sine';
-                sweepOsc.frequency.setValueAtTime(250, audioCtx.currentTime);
-                sweepOsc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 1.5);
-                sweepOsc.frequency.exponentialRampToValueAtTime(250, audioCtx.currentTime + 3);
-
-                const sweepGain = audioCtx.createGain();
-                sweepGain.gain.setValueAtTime(0, audioCtx.currentTime);
-                sweepGain.gain.linearRampToValueAtTime(0.04, audioCtx.currentTime + 1.5);
-                sweepGain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 3);
-
-                sweepOsc.connect(sweepGain);
-                sweepGain.connect(masterGain);
-                sweepOsc.start();
-
-                // ---- Record Video & Audio ----
-                const videoStream = renderer.domElement.captureStream(30);
-                const combinedStream = new MediaStream([
-                    ...videoStream.getTracks(),
-                    ...dest.stream.getTracks()
-                ]);
-
-                let options: any = { mimeType: 'video/mp4;codecs=avc1,mp4a.40.2', videoBitsPerSecond: 8000000 };
-                if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-                    options = { mimeType: 'video/mp4', videoBitsPerSecond: 8000000 };
-                }
-                if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-                    options = { mimeType: 'video/webm;codecs=vp9,opus', videoBitsPerSecond: 8000000 };
-                }
-                if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-                    options = { mimeType: 'video/webm', videoBitsPerSecond: 8000000 };
-                }
-
-                const mediaRecorder = new MediaRecorder(combinedStream, options);
-                const chunks: Blob[] = [];
-
-                mediaRecorder.ondataavailable = (e) => {
-                    if (e.data.size > 0) chunks.push(e.data);
+                mediaRecorder.onerror = event => {
+                    const recorderError = (event as ErrorEvent).error;
+                    reject(recorderError ?? new Error('Failed to record video.'));
                 };
-
                 mediaRecorder.onstop = () => {
-                    const isMp4 = mediaRecorder.mimeType.includes('mp4');
-                    const blobType = isMp4 ? 'video/mp4' : 'video/webm';
-                    const blob = new Blob(chunks, { type: blobType });
-
-                    // Cleanup
-                    if (audioSource) {
-                        audioSource.stop();
-                        audioSource.disconnect();
-                    }
-                    sweepOsc.stop();
-                    audioCtx.close();
-                    renderer.dispose();
-                    geometry.dispose();
-                    frontMat.dispose();
-                    darkMat.dispose();
-                    texture.dispose();
-
-                    resolve(blob);
-                };
-
-                mediaRecorder.start();
-
-                // Render loop: 3 seconds @ 30fps
-                const totalFrames = 90;
-                let frame = 0;
-
-                const renderLoop = () => {
-                    if (frame > totalFrames) {
-                        mediaRecorder.stop();
+                    const type = mediaRecorder.mimeType || options.mimeType || 'video/webm';
+                    const blob = new Blob(chunks, { type });
+                    if (!blob.size) {
+                        reject(new Error('No video data was produced.'));
                         return;
                     }
-                    const progress = frame / totalFrames;
-                    const angle = progress * Math.PI * 2;
-
-                    mesh.rotation.y = Math.sin(angle) * 0.3;
-                    mesh.rotation.x = Math.sin(angle * 2) * 0.05;
-
-                    lightRefRef1.position.x = Math.sin(angle) * 400;
-                    lightRefRef1.position.y = Math.cos(angle * 1.5) * 200;
-                    lightRefRef2.position.x = Math.cos(angle * 1.2) * 350;
-                    lightRefRef2.position.y = Math.sin(angle * 0.8) * 250;
-                    lightRefRef3.position.x = Math.sin(angle * 0.5) * 450;
-                    lightRefRef3.position.y = Math.sin(angle * 2) * -150;
-
-                    renderer.render(scene, camera);
-                    frame++;
-                    requestAnimationFrame(renderLoop);
+                    resolve(blob);
                 };
+            });
 
-                renderLoop();
+            mediaRecorder.start(250);
 
-            } catch (err) {
-                reject(err);
+            const audioStartAt = audioCtx.currentTime + 0.04;
+            masterGain.gain.setValueAtTime(0, audioStartAt);
+            masterGain.gain.linearRampToValueAtTime(0.42, audioStartAt + 0.25);
+            masterGain.gain.setValueAtTime(0.42, audioStartAt + durationSec - 0.45);
+            masterGain.gain.linearRampToValueAtTime(0, audioStartAt + durationSec);
+
+            if (audioSource) {
+                audioSource.start(audioStartAt);
             }
-        });
+            sweepOsc.frequency.setValueAtTime(220, audioStartAt);
+            sweepOsc.frequency.exponentialRampToValueAtTime(760, audioStartAt + durationSec * 0.52);
+            sweepOsc.frequency.exponentialRampToValueAtTime(260, audioStartAt + durationSec);
+            sweepGain.gain.setValueAtTime(0, audioStartAt);
+            sweepGain.gain.linearRampToValueAtTime(0.04, audioStartAt + durationSec * 0.4);
+            sweepGain.gain.linearRampToValueAtTime(0, audioStartAt + durationSec);
+            sweepOsc.start(audioStartAt);
+
+            sparkleOsc.frequency.setValueAtTime(880, audioStartAt);
+            sparkleOsc.frequency.exponentialRampToValueAtTime(1320, audioStartAt + 0.8);
+            sparkleGain.gain.setValueAtTime(0, audioStartAt);
+            sparkleGain.gain.linearRampToValueAtTime(0.018, audioStartAt + 0.18);
+            sparkleGain.gain.linearRampToValueAtTime(0, audioStartAt + 1.05);
+            sparkleOsc.start(audioStartAt);
+
+            for (let frame = 0; frame <= Math.ceil(VIDEO_DURATION_MS / frameInterval); frame++) {
+                const elapsed = Math.min(frame * frameInterval, VIDEO_DURATION_MS);
+                renderVideoFrame(elapsed, captureTrack);
+
+                const targetTime = performance.now() + frameInterval;
+                await wait(Math.max(0, targetTime - performance.now()));
+            }
+
+            renderVideoFrame(VIDEO_DURATION_MS, captureTrack);
+            await wait(180);
+
+            if (mediaRecorder.state === 'recording') {
+                mediaRecorder.requestData();
+                await wait(60);
+                mediaRecorder.stop();
+            }
+
+            return await recordingDone;
+        } finally {
+            cleanup();
+        }
     };
 
     const handleDownloadVideo = async () => {
@@ -897,6 +1129,7 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
             a.href = url;
             a.download = `${user.username}-seismic-card.${extension}`;
             a.click();
+            window.setTimeout(() => URL.revokeObjectURL(url), 1000);
         } catch (err) {
             console.error('Failed to create video:', err);
         } finally {
@@ -928,7 +1161,7 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
             const imageUri = await uploadFileToIPFS(imageBlob, `${user.username}-card.png`);
 
             // 4. Generate video blob
-            setMintStatus('Generating NFT Video (3s)...');
+            setMintStatus('Generating NFT Video...');
             const videoBlob = await generateVideoBlob();
 
             // 5. Upload video to IPFS
@@ -952,8 +1185,9 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
             if (!walletClient) throw new Error('Wallet not connected');
             const hash = await shieldedWriteContract(walletClient, {
                 address: CONTRACT_ADDRESS as `0x${string}`,
-                abi: SEISMIC_DISCORD_STAT_ABI as any,
+                abi: SEISMIC_DISCORD_STAT_ABI as unknown as Abi,
                 functionName: "mint",
+                chain: null,
                 args: [
                     tokenURI,
                     BigInt(user.art || 0),
@@ -962,14 +1196,15 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
                     BigInt(Math.floor(mag || 0))
                 ],
                 gas: BigInt(5000000), // Hardcoded gas
-            } as any);
+            });
             setTxHash(hash);
 
             setMintStatus('✅ Mint Successful!');
             setTimeout(() => setMintStatus(''), 5000);
-        } catch (err: any) {
+        } catch (err: unknown) {
+            const mintError = err as MintError;
             console.error('Failed to mint:', err);
-            setMintStatus(`❌ ${err?.shortMessage || err?.message || 'Mint Failed'}`);
+            setMintStatus(`❌ ${mintError.shortMessage || mintError.message || 'Mint Failed'}`);
             setTimeout(() => setMintStatus(''), 5000);
         } finally {
             setIsMinting(false);
