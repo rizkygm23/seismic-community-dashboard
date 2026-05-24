@@ -29,17 +29,28 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <Providers>
           <Navbar />
-          <main style={{ minHeight: 'calc(100vh - 64px)' }}>
+          <main style={{ minHeight: 'calc(100vh - 56px)' }}>
             {children}
           </main>
           <footer style={{
-            borderTop: '1px solid var(--seismic-gray-800)',
-            padding: '24px 0',
-            marginTop: 48,
+            borderTop: '1px solid var(--seismic-hairline)',
+            padding: '40px 0',
+            marginTop: 88,
+            background: 'var(--seismic-dark)',
+            color: 'var(--seismic-on-dark-muted)',
           }}>
-            <div className="container text-center">
-              <p className="text-muted" style={{ fontSize: '0.875rem' }}>
-                Seismic Community Dashboard • Built with data from Discord
+            <div className="container" style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              gap: 16,
+              flexWrap: 'wrap',
+            }}>
+              <p style={{ fontSize: '0.8125rem', color: 'var(--seismic-on-dark-muted)' }}>
+                Seismic Community Dashboard
+              </p>
+              <p style={{ fontSize: '0.8125rem', color: 'var(--seismic-on-dark-muted)' }}>
+                Built with live Discord contribution data
               </p>
             </div>
           </footer>
@@ -48,3 +59,5 @@ export default function RootLayout({
     </html>
   );
 }
+
+

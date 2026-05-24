@@ -1,5 +1,19 @@
 import axios from 'axios';
 
+const UPLOAD_TIMEOUT_MS = 5 * 60 * 1000;
+const METADATA_TIMEOUT_MS = 60 * 1000;
+
+type UploadProgress = {
+    loaded: number;
+    total?: number;
+    percent?: number;
+};
+
+type UploadFileOptions = {
+    onUploadProgress?: (progress: UploadProgress) => void;
+    timeoutMs?: number;
+};
+
 export const uploadMetadataToIPFS = async (metadataInfo: object) => {
     try {
         const response = await axios.post(
@@ -9,6 +23,7 @@ export const uploadMetadataToIPFS = async (metadataInfo: object) => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                timeout: METADATA_TIMEOUT_MS,
             }
         );
 
@@ -19,7 +34,7 @@ export const uploadMetadataToIPFS = async (metadataInfo: object) => {
     }
 };
 
-export const uploadFileToIPFS = async (file: Blob | File, filename: string) => {
+export const uploadFileToIPFS = async (file: Blob | File, filename: string, options: UploadFileOptions = {}) => {
     // Create form data
     const formData = new FormData();
     formData.append('file', file, filename);
@@ -29,8 +44,20 @@ export const uploadFileToIPFS = async (file: Blob | File, filename: string) => {
             '/api/pinata/file',
             formData,
             {
-                headers: {
-                    'Content-Type': `multipart/form-data`,
+                timeout: options.timeoutMs ?? UPLOAD_TIMEOUT_MS,
+                onUploadProgress: event => {
+                    if (!options.onUploadProgress) return;
+
+                    const total = event.total ?? file.size;
+                    const percent = total > 0
+                        ? Math.min(100, Math.floor((event.loaded / total) * 100))
+                        : undefined;
+
+                    options.onUploadProgress({
+                        loaded: event.loaded,
+                        total,
+                        percent,
+                    });
                 },
             }
         );

@@ -225,7 +225,7 @@ export default function Leaderboard() {
                                                 </div>
                                                 <div>
                                                     <div className="font-medium truncate" style={{
-                                                        color: 'var(--seismic-white)',
+                                                        color: 'var(--seismic-ink)',
                                                         maxWidth: 200,
                                                         display: 'flex',
                                                         alignItems: 'center',
@@ -260,7 +260,7 @@ export default function Leaderboard() {
                 </div>
 
                 {/* Loading / Load More */}
-                <div style={{ padding: 16, borderTop: '1px solid var(--seismic-gray-800)' }}>
+                <div style={{ padding: 16, borderTop: '1px solid var(--seismic-hairline)' }}>
                     {loading && users.length === 0 ? (
                         <div className="flex justify-center">
                             <div className="spinner" />

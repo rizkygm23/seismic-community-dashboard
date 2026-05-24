@@ -285,12 +285,13 @@ export default function RoleExplorer() {
                                         onClick={() => setSelectedUser(user)}
                                         style={{
                                             padding: 12,
-                                            background: 'var(--seismic-gray-800)',
-                                            borderRadius: 'var(--border-radius-sm)',
+                                            background: 'var(--seismic-canvas)',
+                                            border: '1px solid var(--seismic-hairline)',
+                                            borderRadius: '8px',
                                             cursor: 'pointer',
-                                            transition: 'background-color 0.2s'
+                                            transition: 'background-color 0.2s, border-color 0.2s'
                                         }}
-                                        className="hover:bg-gray-700 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4"
+                                        className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4"
                                     >
                                         <div className="flex items-center gap-3 w-full sm:w-auto sm:flex-1 min-w-0">
                                             <div className="avatar avatar-sm shrink-0">
@@ -302,7 +303,7 @@ export default function RoleExplorer() {
                                             </div>
                                             <div style={{ flex: 1, minWidth: 0 }}>
                                                 <div className="font-medium truncate" style={{
-                                                    color: 'var(--seismic-white)',
+                                                    color: 'var(--seismic-ink)',
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     gap: 6
@@ -323,7 +324,7 @@ export default function RoleExplorer() {
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="flex justify-between sm:justify-end sm:gap-6 w-full sm:w-auto mt-1 sm:mt-0 pt-2 sm:pt-0 border-t sm:border-0 border-[var(--seismic-gray-700)]">
+                                        <div className="flex justify-between sm:justify-end sm:gap-6 w-full sm:w-auto mt-1 sm:mt-0 pt-2 sm:pt-0 border-t sm:border-0 border-[var(--seismic-hairline)]">
                                             <div className="text-center sm:text-right flex-1 sm:flex-none">
                                                 <div className="font-medium text-secondary">{user.tweet}</div>
                                                 <div className="text-muted" style={{ fontSize: '0.6875rem' }}>Tweet</div>
@@ -333,7 +334,7 @@ export default function RoleExplorer() {
                                                 <div className="text-muted" style={{ fontSize: '0.6875rem' }}>Art</div>
                                             </div>
                                             <div className="text-center sm:text-right flex-1 sm:flex-none" title="General + Devnet + Report">
-                                                <div className="font-medium" style={{ color: '#60d394' }}>{(user.general_chat + user.devnet_chat + user.report_chat).toLocaleString()}</div>
+                                                <div className="font-medium" style={{ color: 'var(--seismic-plum-deep)' }}>{(user.general_chat + user.devnet_chat + user.report_chat).toLocaleString()}</div>
                                                 <div className="text-muted" style={{ fontSize: '0.6875rem' }}>Chat*</div>
                                             </div>
                                             <div className="text-center sm:text-right flex-1 sm:flex-none">

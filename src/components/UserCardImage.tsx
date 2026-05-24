@@ -76,15 +76,15 @@ function SeismicConnectButton() {
                                             padding: '10px 18px',
                                             fontSize: '0.875rem',
                                             fontWeight: 600,
-                                            color: '#fff',
-                                            background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                                            border: 'none',
-                                            borderRadius: 12,
+                                            color: 'var(--seismic-canvas)',
+                                            background: 'var(--seismic-ink)',
+                                            border: '1px solid var(--seismic-ink)',
+                                            borderRadius: 4,
                                             cursor: 'pointer',
-                                            transition: 'all 0.2s ease',
+                                            transition: 'background-color 0.15s ease, color 0.15s ease',
                                         }}
                                     >
-                                        🔗 Connect Wallet
+                                        [+] Connect Wallet
                                     </button>
                                 );
                             }
@@ -98,14 +98,14 @@ function SeismicConnectButton() {
                                             padding: '10px 18px',
                                             fontSize: '0.875rem',
                                             fontWeight: 600,
-                                            color: '#fff',
-                                            background: '#ef4444',
-                                            border: 'none',
-                                            borderRadius: 12,
+                                            color: 'var(--seismic-canvas)',
+                                            background: '#ff3b30',
+                                            border: '1px solid #ff3b30',
+                                            borderRadius: 4,
                                             cursor: 'pointer',
                                         }}
                                     >
-                                        ⚠️ Wrong Network
+                                        [x] Wrong Network
                                     </button>
                                 );
                             }
@@ -122,10 +122,10 @@ function SeismicConnectButton() {
                                             padding: '8px 12px',
                                             fontSize: '0.8rem',
                                             fontWeight: 500,
-                                            color: '#d1d5db',
-                                            background: 'rgba(255,255,255,0.05)',
-                                            border: '1px solid rgba(255,255,255,0.1)',
-                                            borderRadius: 10,
+                                            color: 'var(--seismic-ink)',
+                                            background: 'var(--seismic-canvas)',
+                                            border: '1px solid var(--seismic-hairline)',
+                                            borderRadius: 4,
                                             cursor: 'pointer',
                                         }}
                                     >
@@ -149,15 +149,15 @@ function SeismicConnectButton() {
                                             padding: '8px 12px',
                                             fontSize: '0.8rem',
                                             fontWeight: 500,
-                                            color: '#d1d5db',
-                                            background: 'rgba(255,255,255,0.05)',
-                                            border: '1px solid rgba(255,255,255,0.1)',
-                                            borderRadius: 10,
+                                            color: 'var(--seismic-ink)',
+                                            background: 'var(--seismic-canvas)',
+                                            border: '1px solid var(--seismic-hairline)',
+                                            borderRadius: 4,
                                             cursor: 'pointer',
                                         }}
                                     >
                                         {formattedBalance} ETH
-                                        <span style={{ color: '#9ca3af' }}>|</span>
+                                        <span style={{ color: 'var(--seismic-mute)' }}>|</span>
                                         {account.displayName}
                                     </button>
                                 </div>
@@ -188,9 +188,21 @@ const DPR = 2; // 2x for retina
 const VIDEO_SCALE = 2;
 const VIDEO_FPS = 30;
 const VIDEO_DURATION_MS = 4500;
-const VIDEO_BITRATE = 12_000_000;
+const VIDEO_BITRATE = 6_000_000;
+const VIDEO_UPLOAD_TIMEOUT_MS = 8 * 60 * 1000;
 
 const wait = (ms: number) => new Promise(resolve => window.setTimeout(resolve, ms));
+
+const formatFileSize = (bytes: number) => {
+    if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+
+    const units = ['B', 'KB', 'MB', 'GB'];
+    const unitIndex = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), units.length - 1);
+    const value = bytes / Math.pow(1024, unitIndex);
+    const decimals = unitIndex === 0 ? 0 : 1;
+
+    return `${value.toFixed(decimals)} ${units[unitIndex]}`;
+};
 
 type WindowWithLegacyAudioContext = Window & typeof globalThis & {
     webkitAudioContext?: typeof AudioContext;
@@ -606,42 +618,42 @@ async function drawCard(
     // --- Badge Logic ---
     // 1. Tenure & Activity Consistency
     if (user.first_message_date && new Date(user.first_message_date) < new Date('2024-06-01'))
-        achievements.push({ label: 'Early Adopter', color: '#fff', priority: 5 });
+        achievements.push({ label: 'Early Adopter', color: '#161616', priority: 5 });
 
     if (activityDays >= 90)
-        achievements.push({ label: 'Veteran', color: '#a3a3a3', priority: 3 });
+        achievements.push({ label: 'Veteran', color: '#737373', priority: 3 });
     else if (activityDays >= 30)
-        achievements.push({ label: 'Consistent', color: '#fff', priority: 2 });
+        achievements.push({ label: 'Consistent', color: '#282826', priority: 2 });
 
     // 2. Volume Milestones
     if (user.total_messages >= 5000)
-        achievements.push({ label: 'Relentless', color: '#ef4444', priority: 10 }); // Red/Orange
+        achievements.push({ label: 'Relentless', color: '#523542', priority: 10 });
     else if (user.total_messages >= 1000)
-        achievements.push({ label: 'Diamond', color: '#38bdf8', priority: 6 }); // Cyan
+        achievements.push({ label: 'Diamond', color: '#825a6d', priority: 6 });
 
     // 3. Specialization
     const artRatio = user.total_messages > 0 ? user.art / user.total_messages : 0;
     const tweetRatio = user.total_messages > 0 ? user.tweet / user.total_messages : 0;
 
     if (user.art >= 100)
-        achievements.push({ label: 'Artistic Soul', color: '#f472b6', priority: 4 });
+        achievements.push({ label: 'Artistic Soul', color: '#825a6d', priority: 4 });
 
     if (user.tweet >= 500)
-        achievements.push({ label: 'Voice of Seismic', color: '#818cf8', priority: 4 });
+        achievements.push({ label: 'Voice of Seismic', color: '#523542', priority: 4 });
 
     if (user.total_messages > 200 && artRatio >= 0.4 && tweetRatio >= 0.4)
-        achievements.push({ label: 'Balanced Force', color: '#34d399', priority: 5 }); // Green
+        achievements.push({ label: 'Balanced Force', color: '#737373', priority: 5 });
 
     // 4. Performance
     if (rankInfo && (rankInfo.totalRank / rankInfo.totalUsers) <= 0.01)
-        achievements.push({ label: 'Top 1% Elite', color: '#fbbf24', priority: 20 }); // Gold
+        achievements.push({ label: 'Top 1% Elite', color: '#161616', priority: 20 });
     else if (rankInfo && (rankInfo.totalRank / rankInfo.totalUsers) <= 0.1)
-        achievements.push({ label: 'Top 10%', color: '#fbbf24', priority: 8 });
+        achievements.push({ label: 'Top 10%', color: '#282826', priority: 8 });
 
     // 5. Momentum
     const msgsPerDay = user.total_messages / activityDays;
     if (msgsPerDay > 15)
-        achievements.push({ label: 'High Octane', color: '#f59e0b', priority: 7 });
+        achievements.push({ label: 'High Octane', color: '#523542', priority: 7 });
 
     // Rising Star: Joined recently (< 45 days) but high activity (> 300 msgs)
     const joinedDays = user.joined_at
@@ -649,7 +661,7 @@ async function drawCard(
         : activityDays;
 
     if (joinedDays < 45 && user.total_messages > 300)
-        achievements.push({ label: 'Rising Star', color: '#facc15', priority: 9 });
+        achievements.push({ label: 'Rising Star', color: '#825a6d', priority: 9 });
 
     // 6. Badges (Chat, Devnet, Report)
     const userBadges = getUserBadges(user);
@@ -1157,17 +1169,33 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
             });
 
             // 3. Upload image to IPFS
-            setMintStatus('Uploading Image to IPFS...');
-            const imageUri = await uploadFileToIPFS(imageBlob, `${user.username}-card.png`);
+            setMintStatus(`Uploading Image (${formatFileSize(imageBlob.size)})...`);
+            const imageUri = await uploadFileToIPFS(imageBlob, `${user.username}-card.png`, {
+                onUploadProgress: progress => {
+                    setMintStatus(`Uploading Image ${progress.percent ?? 0}% (${formatFileSize(progress.loaded)} / ${formatFileSize(progress.total ?? imageBlob.size)})`);
+                },
+            });
 
             // 4. Generate video blob
             setMintStatus('Generating NFT Video...');
             const videoBlob = await generateVideoBlob();
 
             // 5. Upload video to IPFS
-            setMintStatus('Uploading Video to IPFS...');
+            setMintStatus(`Uploading Video (${formatFileSize(videoBlob.size)})...`);
             const extension = videoBlob.type.includes('mp4') ? 'mp4' : 'webm';
-            const animationUrl = await uploadFileToIPFS(videoBlob, `${user.username}-card.${extension}`);
+            const animationUrl = await uploadFileToIPFS(videoBlob, `${user.username}-card.${extension}`, {
+                timeoutMs: VIDEO_UPLOAD_TIMEOUT_MS,
+                onUploadProgress: progress => {
+                    const percent = progress.percent ?? 0;
+                    const uploaded = formatFileSize(progress.loaded);
+                    const total = formatFileSize(progress.total ?? videoBlob.size);
+
+                    setMintStatus(percent >= 100
+                        ? `Pinning Video on IPFS (${total})...`
+                        : `Uploading Video ${percent}% (${uploaded} / ${total})`
+                    );
+                },
+            });
 
             // 6. Create and upload metadata
             setMintStatus('Uploading Metadata...');
@@ -1199,12 +1227,12 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
             });
             setTxHash(hash);
 
-            setMintStatus('✅ Mint Successful!');
+            setMintStatus('Mint successful');
             setTimeout(() => setMintStatus(''), 5000);
         } catch (err: unknown) {
             const mintError = err as MintError;
             console.error('Failed to mint:', err);
-            setMintStatus(`❌ ${mintError.shortMessage || mintError.message || 'Mint Failed'}`);
+            setMintStatus(`Mint failed: ${mintError.shortMessage || mintError.message || 'Mint Failed'}`);
             setTimeout(() => setMintStatus(''), 5000);
         } finally {
             setIsMinting(false);
@@ -1213,20 +1241,21 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
     };
 
     return (
-        <div style={{ maxWidth: 600, margin: '0 auto', perspective: 1200 }}>
+        <div style={{ maxWidth: 600, margin: '0 auto' }}>
             <style>{`
                 @keyframes card-tilt-preview {
-                    0% { transform: rotateY(-8deg) rotateX(2deg); }
-                    100% { transform: rotateY(8deg) rotateX(-2deg); }
+                    0%, 100% { transform: none; }
                 }
             `}</style>
 
             {/* Canvas Container */}
             <div style={{
-                borderRadius: 16,
+                borderRadius: 4,
+                border: '1px solid var(--seismic-hairline)',
                 transformStyle: 'preserve-3d',
-                animation: 'card-tilt-preview 3s ease-in-out infinite alternate',
-                boxShadow: '0 20px 50px rgba(0,0,0,0.6), 0 0 20px rgba(166, 146, 77, 0.1)',
+                animation: 'none',
+                boxShadow: 'none',
+                overflow: 'hidden',
             }}>
                 <canvas
                     ref={canvasRef}
@@ -1234,7 +1263,7 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
                         display: 'block',
                         width: '100%',
                         height: 'auto',
-                        borderRadius: 16,
+                        borderRadius: 4,
                     }}
                 />
             </div>
@@ -1291,7 +1320,7 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
                             // Jika sudah berhasil mint, share tweet khusus mint + tx hash
                             if (txHash) {
                                 const explorerUrl = `https://seismic-testnet.socialscan.io/tx/${txHash}`;
-                                const text = `Just minted my Shielded Seismic Discord Stat NFT on Seismic Testnet! 🚀\n\nTx Hash:\n${explorerUrl}\n\nMint Here : https://seismic.rizzgm.xyz\n\nDecrypt your NFT traits here: https://decrypt.rizzgm.xyz\n\n@SeismicSys #privacy #seismic #testnet`;
+                                const text = `Just minted my Shielded Seismic Discord Stat NFT on Seismic Testnet!\n\nTx Hash:\n${explorerUrl}\n\nMint Here : https://seismic.rizzgm.xyz\n\nDecrypt your NFT traits here: https://decrypt.rizzgm.xyz\n\n@SeismicSys #privacy #seismic #testnet`;
                                 window.open(
                                     `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`,
                                     '_blank'
@@ -1303,7 +1332,7 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
                             const percentText = rankInfo ? ((rankInfo.totalUsers - rankInfo.totalRank) / rankInfo.totalUsers * 100).toFixed(2) : '';
                             const topBadge = rankInfo && (rankInfo.totalRank / rankInfo.totalUsers) <= 0.01 ? 'Top 1% Elite' : user.total_messages > 1000 ? 'Diamond' : 'Member';
 
-                            const text = `Just checked my Seismic stats! 🚀\n\nI'm in the ${percentText}% (Rank #${rankInfo?.totalRank}) with the ${topBadge} badge!\n\nCheck yours here: seismic.rizzgm.xyz\n\n@Seismic_X #SeismicCommunity`;
+                            const text = `Just checked my Seismic stats!\n\nI'm in the ${percentText}% (Rank #${rankInfo?.totalRank}) with the ${topBadge} badge!\n\nCheck yours here: seismic.rizzgm.xyz\n\n@Seismic_X #SeismicCommunity`;
                             window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
                         }}
                         className="btn btn-secondary"
@@ -1315,9 +1344,9 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
                             padding: '14px 10px',
                             fontSize: '0.8rem',
                             cursor: 'pointer',
-                            backgroundColor: '#000',
-                            borderColor: '#333',
-                            color: '#fff'
+                            backgroundColor: 'var(--seismic-ink)',
+                            borderColor: 'var(--seismic-ink)',
+                            color: 'var(--seismic-canvas)'
                         }}
                     >
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
@@ -1338,8 +1367,8 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
                             padding: '14px 10px',
                             fontSize: '0.8rem',
                             cursor: (isRecording || isMinting) ? 'wait' : 'pointer',
-                            backgroundColor: (isRecording || isMinting) ? '#1a1a1a' : '',
-                            color: (isRecording || isMinting) ? '#888' : ''
+                            backgroundColor: (isRecording || isMinting) ? 'var(--seismic-card)' : '',
+                            color: (isRecording || isMinting) ? 'var(--seismic-ash)' : ''
                         }}
                     >
                         {isRecording && !isMinting ? (
@@ -1358,15 +1387,15 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
                     <div style={{ gridColumn: '1 / -1', marginTop: 8 }}>
                         <div style={{
                             fontSize: '0.8rem',
-                            color: '#fbbf24',
-                            background: 'rgba(251, 191, 36, 0.1)',
+                            color: 'var(--seismic-body)',
+                            background: 'var(--seismic-soft)',
                             padding: '10px',
-                            borderRadius: '8px',
-                            border: '1px solid rgba(251, 191, 36, 0.2)',
+                            borderRadius: '4px',
+                            border: '1px solid var(--seismic-hairline)',
                             textAlign: 'center',
                             marginBottom: '12px'
                         }}>
-                            ⚠️ <strong>Caution:</strong> This is a playground project. Please use a <strong>burn wallet</strong> for your safety and privacy.
+                            <strong>Caution:</strong> This is a playground project. Please use a <strong>burn wallet</strong> for your safety and privacy.
                         </div>
 
                         {!isConnected ? (
@@ -1376,12 +1405,12 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
                                 alignItems: 'center',
                                 gap: 8,
                                 padding: '16px',
-                                background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1))',
-                                borderRadius: 12,
-                                border: '1px solid rgba(99, 102, 241, 0.3)',
+                                background: 'var(--seismic-canvas)',
+                                borderRadius: 4,
+                                border: '1px solid var(--seismic-hairline)',
                             }}>
-                                <div style={{ fontSize: '0.85rem', color: '#a78bfa', fontWeight: 600, marginBottom: 4 }}>
-                                    🔗 Connect Wallet to Mint as NFT
+                                <div style={{ fontSize: '0.85rem', color: 'var(--seismic-ink)', fontWeight: 600, marginBottom: 4 }}>
+                                    Connect Wallet to Mint as NFT
                                 </div>
                                 <SeismicConnectButton />
                             </div>
@@ -1404,16 +1433,12 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
                                         fontWeight: 600,
                                         cursor: isMinting ? 'wait' : 'pointer',
                                         width: '100%',
-                                        border: 'none',
-                                        borderRadius: 12,
-                                        color: '#161616', // Dark text on light background
-                                        background: (isMinting)
-                                            ? 'linear-gradient(135deg, #374151, #1f2937)'
-                                            : 'linear-gradient(135deg, #D4BB6E, #E3CE8C)', // Gold theme
-                                        boxShadow: (isMinting)
-                                            ? 'none'
-                                            : '0 4px 20px rgba(212, 187, 110, 0.4)',
-                                        transition: 'all 0.3s ease',
+                                        border: '1px solid var(--seismic-ink)',
+                                        borderRadius: 4,
+                                        color: isMinting ? 'var(--seismic-ash)' : 'var(--seismic-canvas)',
+                                        background: isMinting ? 'var(--seismic-card)' : 'var(--seismic-ink)',
+                                        boxShadow: 'none',
+                                        transition: 'background-color 0.15s ease, color 0.15s ease',
                                         opacity: (isMinting) ? 0.7 : 1,
                                     }}
                                 >
@@ -1422,7 +1447,7 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
                                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="animate-spin">
                                                 <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                                             </svg>
-                                            <span style={{ color: '#fff' }}>{mintStatus || 'Minting...'}</span>
+                                            <span style={{ color: 'var(--seismic-ash)' }}>{mintStatus || 'Minting...'}</span>
                                         </>
                                     ) : (
                                         <>
@@ -1440,10 +1465,10 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
                                         textAlign: 'center',
                                         fontSize: '0.8rem',
                                         padding: '8px 12px',
-                                        borderRadius: 8,
-                                        background: mintStatus.includes('✅') ? 'rgba(34, 197, 94, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-                                        color: mintStatus.includes('✅') ? '#22c55e' : '#ef4444',
-                                        border: `1px solid ${mintStatus.includes('✅') ? 'rgba(34, 197, 94, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+                                        borderRadius: 4,
+                                        background: 'var(--seismic-soft)',
+                                        color: mintStatus.startsWith('Mint successful') ? 'var(--seismic-plum-deep)' : 'var(--seismic-ink)',
+                                        border: `1px solid ${mintStatus.startsWith('Mint successful') ? 'var(--seismic-plum)' : 'var(--seismic-hairline)'}`,
                                     }}>
                                         {mintStatus}
                                     </div>
@@ -1457,31 +1482,32 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
                                     }}>
                                         <div style={{
                                             fontSize: '0.8rem',
-                                            color: '#9ca3af',
+                                            color: 'var(--seismic-body)',
                                             textAlign: 'center',
                                             wordBreak: 'break-all',
-                                            background: 'rgba(255, 255, 255, 0.03)',
+                                            background: 'var(--seismic-soft)',
                                             padding: '10px',
-                                            borderRadius: '8px',
+                                            borderRadius: '4px',
+                                            border: '1px solid var(--seismic-hairline)',
                                         }}>
                                             <div style={{ marginBottom: 4 }}>Transaction Hash:</div>
                                             <a
                                                 href={`https://seismic-testnet.socialscan.io/tx/${txHash}`}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                style={{ color: '#D4BB6E', textDecoration: 'underline' }}
+                                                style={{ color: 'var(--seismic-ink)', textDecoration: 'underline' }}
                                             >
                                                 {String(txHash)}
                                             </a>
                                         </div>
                                         <div style={{
                                             fontSize: '0.85rem',
-                                            color: '#d1d5db',
+                                            color: 'var(--seismic-body)',
                                             textAlign: 'center',
-                                            background: 'rgba(212, 187, 110, 0.1)',
+                                            background: 'var(--seismic-soft)',
                                             padding: '12px',
-                                            borderRadius: '8px',
-                                            border: '1px solid rgba(212, 187, 110, 0.2)',
+                                            borderRadius: '4px',
+                                            border: '1px solid var(--seismic-hairline)',
                                         }}>
                                             ✨ <strong>Mint Successful!</strong>
                                             <br />
@@ -1490,7 +1516,7 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
                                                 href="https://decrypt.rizzgm.xyz"
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                style={{ color: '#E3CE8C', textDecoration: 'underline', fontWeight: 'bold', display: 'inline-block', marginTop: 4 }}
+                                                style={{ color: 'var(--seismic-ink)', textDecoration: 'underline', fontWeight: 'bold', display: 'inline-block', marginTop: 4 }}
                                             >
                                                 decrypt.rizzgm.xyz
                                             </a>
@@ -1504,23 +1530,21 @@ export default function UserCardImage({ user, rankInfo }: UserCardImageProps) {
                                                         display: 'inline-flex',
                                                         alignItems: 'center',
                                                         gap: '8px',
-                                                        background: '#000',
-                                                        color: '#fff',
+                                                        background: 'var(--seismic-ink)',
+                                                        color: 'var(--seismic-canvas)',
                                                         padding: '8px 16px',
-                                                        borderRadius: '24px',
+                                                        borderRadius: '4px',
                                                         textDecoration: 'none',
                                                         fontSize: '0.85rem',
                                                         fontWeight: 600,
-                                                        border: '1px solid #333',
-                                                        transition: 'all 0.2s',
+                                                        border: '1px solid var(--seismic-ink)',
+                                                        transition: 'background-color 0.15s ease',
                                                     }}
                                                     onMouseEnter={(e) => {
-                                                        e.currentTarget.style.background = '#111';
-                                                        e.currentTarget.style.transform = 'translateY(-1px)';
+                                                        e.currentTarget.style.background = 'var(--seismic-ink-deep)';
                                                     }}
                                                     onMouseLeave={(e) => {
-                                                        e.currentTarget.style.background = '#000';
-                                                        e.currentTarget.style.transform = 'translateY(0)';
+                                                        e.currentTarget.style.background = 'var(--seismic-ink)';
                                                     }}
                                                 >
                                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">

@@ -69,7 +69,7 @@ export default function RecentActivity() {
                             alignItems: 'center',
                             gap: 12,
                             padding: '14px 20px',
-                            borderBottom: index < recentUsers.length - 1 ? '1px solid var(--seismic-gray-800)' : 'none',
+                            borderBottom: index < recentUsers.length - 1 ? '1px solid var(--seismic-hairline)' : 'none',
                         }}
                     >
                         <div className="avatar avatar-sm">
@@ -80,7 +80,7 @@ export default function RecentActivity() {
                             )}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                            <div className="font-medium truncate" style={{ color: 'var(--seismic-white)' }}>
+                            <div className="font-medium truncate" style={{ color: 'var(--seismic-ink)' }}>
                                 {user.display_name || user.username}
                             </div>
                             <div className="text-muted" style={{ fontSize: '0.8125rem' }}>
@@ -88,7 +88,7 @@ export default function RecentActivity() {
                             </div>
                         </div>
                         <div className="text-right">
-                            <div style={{ fontSize: '0.8125rem', color: 'var(--seismic-primary)' }}>
+                            <div style={{ fontSize: '0.8125rem', color: 'var(--seismic-plum)' }}>
                                 {formatTimeAgo(user.last_message_date!)}
                             </div>
                             <div className="text-muted" style={{ fontSize: '0.75rem' }}>

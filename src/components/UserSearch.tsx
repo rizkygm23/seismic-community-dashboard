@@ -213,13 +213,13 @@ export default function UserSearch() {
     return (
         <div style={{ width: '100%', maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}>
             {!user ? (
-                <div className="card" style={{ padding: '40px', border: '1px dashed var(--seismic-gray-700)' }}>
+                <div className="card" style={{ padding: '40px', border: '1px dashed var(--seismic-hairline)' }}>
                     <div style={{ marginBottom: '24px' }}>
                         <div style={{
-                            width: '64px',
-                            height: '64px',
-                            background: '#5865F2',
-                            borderRadius: '50%',
+                            width: '56px',
+                            height: '56px',
+                            background: 'var(--seismic-ink)',
+                            borderRadius: 4,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -241,9 +241,9 @@ export default function UserSearch() {
                             style={{
                                 width: '100%',
                                 maxWidth: '384px',
-                                background: '#5865F2',
-                                color: 'white',
-                                border: 'none',
+                                background: 'var(--seismic-ink)',
+                                color: 'var(--seismic-canvas)',
+                                border: '1px solid var(--seismic-ink)',
                                 gap: '10px',
                                 display: 'flex',
                                 alignItems: 'center',
@@ -267,8 +267,9 @@ export default function UserSearch() {
                             <div style={{
                                 width: '32px',
                                 height: '32px',
-                                borderRadius: '50%',
-                                background: '#262626',
+                                borderRadius: 4,
+                                background: 'var(--seismic-soft)',
+                                border: '1px solid var(--seismic-hairline)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -284,7 +285,7 @@ export default function UserSearch() {
                             </div>
                             <div style={{ textAlign: 'left' }}>
                                 <div style={{ fontSize: '12px', color: 'var(--seismic-gray-400)' }}>Logged in as</div>
-                                <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--seismic-white)' }}>
+                                <div style={{ fontSize: '14px', fontWeight: 500, color: 'var(--seismic-ink)' }}>
                                     {user.user_metadata.full_name || user.user_metadata.name || 'Community Member'}
                                 </div>
                             </div>
@@ -298,7 +299,7 @@ export default function UserSearch() {
                                 border: 'none',
                                 cursor: 'pointer'
                             }}
-                            onMouseEnter={(e) => e.currentTarget.style.color = 'white'}
+                            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--seismic-ink)'}
                             onMouseLeave={(e) => e.currentTarget.style.color = 'var(--seismic-gray-400)'}
                         >
                             Sign Out
@@ -313,7 +314,7 @@ export default function UserSearch() {
                         </div>
                     ) : (
                         <div className="empty-state">
-                            <div className="mb-4 text-4xl">👋</div>
+                            <div className="mb-4 text-4xl">[+]</div>
                             <h3>Welcome, {user.user_metadata.full_name?.split(' ')[0] || 'Friend'}!</h3>
                             <p className="mb-6">{error || "We couldn't find your stats in the database yet."}</p>
                             <p className="text-xs text-muted max-w-md mx-auto">
@@ -327,3 +328,4 @@ export default function UserSearch() {
         </div>
     );
 }
+

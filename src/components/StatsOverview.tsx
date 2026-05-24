@@ -183,8 +183,8 @@ export default function StatsOverview() {
                 {/* Last Updated Indicator */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full" style={{ backgroundColor: 'rgba(130, 90, 109, 0.28)' }}></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2" style={{ backgroundColor: 'var(--seismic-plum)' }}></span>
                     </span>
                     <span className="text-sm font-mono" style={{ color: 'var(--seismic-gray-400)' }}>
                         Updated {timeAgo}
@@ -272,7 +272,7 @@ export default function StatsOverview() {
 
                     <div className="card">
                         <div className="stat-label">Total Chat Messages</div>
-                        <div className="stat-value" style={{ color: '#60d394' }}><EncryptedText text={stats.total_chat_messages.toLocaleString()} enabled={isEncrypted} /></div>
+                        <div className="stat-value" style={{ color: 'var(--seismic-plum-deep)' }}><EncryptedText text={stats.total_chat_messages.toLocaleString()} enabled={isEncrypted} /></div>
                         <div className="text-muted mt-2" style={{ fontSize: '0.8125rem' }}>
                             General + Devnet + Report only
                         </div>
@@ -319,20 +319,21 @@ export default function StatsOverview() {
                                                 <div style={{
                                                     width: '100%',
                                                     height: '100%',
-                                                    background: 'var(--seismic-gray-700)',
+                                                    background: 'var(--seismic-soft)',
+                                                    border: '1px solid var(--seismic-hairline)',
                                                     display: 'flex',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
                                                     fontSize: '0.75rem',
                                                     fontWeight: 600,
-                                                    color: 'var(--seismic-white)'
+                                                    color: 'var(--seismic-ink)'
                                                 }}>
                                                     {user.username[0].toUpperCase()}
                                                 </div>
                                             )}
                                         </div>
                                         <div style={{ flex: 1, minWidth: 0 }}>
-                                            <div className="font-medium truncate" style={{ color: 'var(--seismic-white)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            <div className="font-medium truncate" style={{ color: 'var(--seismic-ink)', display: 'flex', alignItems: 'center', gap: 6 }}>
                                                 <EncryptedText text={user.display_name || user.username} enabled={isEncrypted} />
                                                 {roleIcon && (
                                                     <img
@@ -435,7 +436,7 @@ export default function StatsOverview() {
                         <div className="card-header">
                             <h3 className="card-title">Region Distribution</h3>
                             <span className="text-muted" style={{ fontSize: '0.875rem' }}>
-                                {regionStats.length} regions • {regionStats.reduce((sum, r) => sum + r.user_count, 0).toLocaleString()} users
+                                {regionStats.length} regions / {regionStats.reduce((sum, r) => sum + r.user_count, 0).toLocaleString()} users
                             </span>
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -467,7 +468,7 @@ export default function StatsOverview() {
                                                         height: 24,
                                                         fontSize: '0.75rem',
                                                         background: index < 3 ? barColor : undefined,
-                                                        color: index < 3 ? '#000' : undefined,
+                                                        color: index < 3 ? 'var(--seismic-canvas)' : undefined,
                                                     }}>
                                                         {index + 1}
                                                     </span>
@@ -520,4 +521,3 @@ export default function StatsOverview() {
         </div>
     );
 }
-

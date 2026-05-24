@@ -60,7 +60,7 @@ export default function HomeStats() {
         <div style={{
             display: 'flex',
             justifyContent: 'center',
-            gap: 40,
+            gap: 12,
             flexWrap: 'wrap',
         }}>
             <StatPill label="Contributors" value={stats.contributors.toLocaleString()} />
@@ -75,17 +75,18 @@ function StatPill({ label, value, color }: { label: string; value: string; color
             display: 'flex',
             alignItems: 'center',
             gap: 10,
-            padding: '8px 20px',
-            background: 'var(--seismic-gray-900)',
-            border: '1px solid var(--seismic-gray-800)',
-            borderRadius: 40,
+            padding: '10px 14px',
+            background: 'var(--seismic-canvas)',
+            border: '1px solid var(--seismic-hairline)',
+            borderRadius: 999,
+            boxShadow: 'var(--shadow-sm)',
         }}>
             <span style={{
-                fontFamily: 'var(--font-mono)',
-                fontWeight: 700,
-                fontSize: '1.125rem',
-                color: color || 'var(--seismic-white)',
-                letterSpacing: '-0.03em',
+                fontFamily: 'var(--font-main)',
+                fontWeight: 600,
+                fontSize: '1rem',
+                color: color || 'var(--seismic-ink)',
+                letterSpacing: 0,
             }}>
                 {value}
             </span>

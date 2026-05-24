@@ -1,29 +1,10 @@
-import StatsOverview from '@/components/StatsOverview';
-import { TypewriterEffect } from "@/components/ui/typewriter-effect";
+import { redirect } from 'next/navigation';
 
 export const metadata = {
     title: 'Statistics | Seismic Community Dashboard',
-    description: 'Community statistics and insights for the Seismic Discord server',
+    description: 'Community statistics are available in the unified dashboard index.',
 };
 
 export default function StatsPage() {
-    return (
-        <div className="container" style={{ paddingTop: 48, paddingBottom: 48 }}>
-            <div style={{ marginBottom: 32 }}>
-                <TypewriterEffect
-                    words={[
-                        { text: "Community", className: "text-[var(--seismic-primary)]" },
-                        { text: "Statistics", className: "text-[var(--seismic-primary)]" },
-                    ]}
-                    className="mb-2 text-left"
-                    cursorClassName="bg-[var(--seismic-primary)]"
-                />
-                <p className="text-muted">
-                    Overview of member activity and community metrics
-                </p>
-            </div>
-
-            <StatsOverview />
-        </div>
-    );
+    redirect('/#statistics');
 }

@@ -8,7 +8,7 @@ import { MAGNITUDE_COLORS, DEFAULT_THEME_COLOR } from '@/lib/constants';
 import UserCardImage from './UserCardImage';
 // @ts-ignore - Importing JS component
 import ElectricBorder from './ElectricBorder';
-import { getUserBadges, getBadgeStyle } from '@/lib/badgeUtils';
+import { getUserBadges } from '@/lib/badgeUtils';
 
 interface UserCardProps {
     user: SeismicUser;
@@ -155,42 +155,42 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
 
         // 1. Tenure
         if (user.first_message_date && new Date(user.first_message_date) < new Date('2024-06-01'))
-            achievements.push({ label: 'Early Adopter', color: '#fff', priority: 5 });
+            achievements.push({ label: 'Early Adopter', color: '#161616', priority: 5 });
 
         if (activityDays >= 90)
-            achievements.push({ label: 'Veteran', color: '#a3a3a3', priority: 3 });
+            achievements.push({ label: 'Veteran', color: '#737373', priority: 3 });
         else if (activityDays >= 30)
-            achievements.push({ label: 'Consistent', color: '#fff', priority: 2 });
+            achievements.push({ label: 'Consistent', color: '#282826', priority: 2 });
 
         // 2. Volume
         if (user.total_messages >= 5000)
-            achievements.push({ label: 'Relentless', color: '#ef4444', priority: 10 });
+            achievements.push({ label: 'Relentless', color: '#523542', priority: 10 });
         else if (user.total_messages >= 1000)
-            achievements.push({ label: 'Diamond', color: '#38bdf8', priority: 6 });
+            achievements.push({ label: 'Diamond', color: '#825a6d', priority: 6 });
 
         // 3. Specialization
         const artRatio = user.total_messages > 0 ? user.art / user.total_messages : 0;
         const tweetRatio = user.total_messages > 0 ? user.tweet / user.total_messages : 0;
 
         if (user.art >= 100)
-            achievements.push({ label: 'Artistic Soul', color: '#f472b6', priority: 4 });
+            achievements.push({ label: 'Artistic Soul', color: '#825a6d', priority: 4 });
 
         if (user.tweet >= 500)
-            achievements.push({ label: 'Voice of Seismic', color: '#818cf8', priority: 4 });
+            achievements.push({ label: 'Voice of Seismic', color: '#523542', priority: 4 });
 
         if (user.total_messages > 200 && artRatio >= 0.4 && tweetRatio >= 0.4)
-            achievements.push({ label: 'Balanced Force', color: '#34d399', priority: 5 });
+            achievements.push({ label: 'Balanced Force', color: '#737373', priority: 5 });
 
         // 4. Rank
         if (rankInfo && (rankInfo.totalRank / rankInfo.totalUsers) <= 0.01)
-            achievements.push({ label: 'Top 1% Elite', color: '#fbbf24', priority: 20 });
+            achievements.push({ label: 'Top 1% Elite', color: '#161616', priority: 20 });
         else if (rankInfo && (rankInfo.totalRank / rankInfo.totalUsers) <= 0.1)
-            achievements.push({ label: 'Top 10%', color: '#fbbf24', priority: 8 });
+            achievements.push({ label: 'Top 10%', color: '#282826', priority: 8 });
 
         // 5. Momentum
         const msgsPerDay = user.total_messages / activityDays;
         if (msgsPerDay > 15)
-            achievements.push({ label: 'High Octane', color: '#f59e0b', priority: 7 });
+            achievements.push({ label: 'High Octane', color: '#523542', priority: 7 });
 
         // Rising Star
         const joinedDays = user.joined_at
@@ -198,7 +198,7 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
             : activityDays;
 
         if (joinedDays < 45 && user.total_messages > 300)
-            achievements.push({ label: 'Rising Star', color: '#facc15', priority: 9 });
+            achievements.push({ label: 'Rising Star', color: '#825a6d', priority: 9 });
 
         return achievements.sort((a, b) => b.priority - a.priority).slice(0, 5);
     };
@@ -229,21 +229,19 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                                 alignItems: 'center',
                                 gap: 8,
                                 padding: '10px 20px',
-                                background: 'rgba(255,255,255,0.06)',
-                                border: '1px solid var(--seismic-gray-700)',
-                                borderRadius: '12px',
-                                color: 'var(--seismic-gray-300)',
+                                background: 'var(--seismic-canvas)',
+                                border: '1px solid var(--seismic-hairline)',
+                                borderRadius: 4,
+                                color: 'var(--seismic-ink)',
                                 cursor: 'pointer',
                                 fontSize: '0.9rem',
                                 transition: 'all 0.2s',
                             }}
                             onMouseEnter={(e) => {
-                                e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-                                e.currentTarget.style.transform = 'translateY(-2px)';
+                                e.currentTarget.style.background = 'var(--seismic-soft)';
                             }}
                             onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
-                                e.currentTarget.style.transform = 'translateY(0)';
+                                e.currentTarget.style.background = 'var(--seismic-canvas)';
                             }}
                             title="Generate shareable card image"
                         >
@@ -263,16 +261,16 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                 className={`card ${compact ? 'user-card-compact' : 'user-card-main'}`}
                 width="100%"
                 height="auto"
-                background={`color-mix(in srgb, ${themeColor} 15%, #0a0a0a)`}
-                borderColor={`${themeColor}80`}
+                background="var(--seismic-canvas)"
+                borderColor="var(--seismic-hairline)"
                 borderRadius="var(--border-radius)"
                 glareColor={themeColor}
                 glareOpacity={0.6}
                 style={{
                     padding: compact ? 16 : 24,
-                    fontFamily: 'sans-serif',
-                    borderWidth: '2px', // Overrides GlareHover.css 1px border
-                    boxShadow: `0 0 30px ${themeColor}30, 0 0 60px ${themeColor}15`,
+                    fontFamily: 'var(--font-main)',
+                    borderWidth: '1px',
+                    boxShadow: 'none',
                     display: 'flex',
                     flexDirection: 'column',
                     cursor: 'default', // Override pointer on hover
@@ -291,7 +289,7 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                     >
                         <div className="avatar avatar-xl" style={{ border: 'none' }}>
                             {user.avatar_url ? (
-                                <img src={user.avatar_url} alt={user.username} crossOrigin="anonymous" style={{ borderRadius: '50%' }} />
+                                <img src={user.avatar_url} alt={user.username} crossOrigin="anonymous" style={{ borderRadius: 4 }} />
                             ) : (
                                 user.username[0].toUpperCase()
                             )}
@@ -343,9 +341,9 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                         gap: 8,
                         marginBottom: 24,
                         padding: 12,
-                        background: `color-mix(in srgb, ${themeColor} 10%, #151515)`,
+                        background: 'var(--seismic-soft)',
                         borderRadius: 'var(--border-radius-sm)',
-                        border: `1px solid ${themeColor}30`
+                        border: '1px solid var(--seismic-hairline)'
                     }}>
                         {/* Seismic Scholar Badge - shown when is_learned is true */}
                         {user.is_learned && (
@@ -353,9 +351,9 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                                 className="badge"
                                 title="Completed Seismic Learning Program"
                                 style={{
-                                    backgroundColor: 'rgba(56, 189, 248, 0.15)',
-                                    color: '#38bdf8',
-                                    border: '1px solid rgba(56, 189, 248, 0.4)',
+                                    backgroundColor: 'var(--seismic-panel)',
+                                    color: 'var(--seismic-plum)',
+                                    border: '1px solid var(--seismic-hairline)',
                                     fontSize: '0.75rem',
                                     padding: '4px 10px',
                                     fontWeight: 600,
@@ -363,7 +361,7 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                                     alignItems: 'center',
                                     gap: 6,
                                     cursor: 'help',
-                                    boxShadow: '0 0 8px rgba(56, 189, 248, 0.2)',
+                                    boxShadow: 'none',
                                 }}
                             >
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -398,16 +396,16 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                             let style = {
                                 background: `color-mix(in srgb, ${badge.color} ${opacity * 100}%, transparent)`,
                                 border: `1px solid color-mix(in srgb, ${badge.color} ${borderOpacity * 100}%, transparent)`,
-                                color: 'var(--seismic-white)',
+                                color: 'var(--seismic-ink)',
                                 opacity: 1,
                             };
 
                             // Override for unachieved
                             if (!isAch) {
                                 style = {
-                                    background: 'rgba(255, 255, 255, 0.02)',
-                                    border: '1px dashed rgba(255, 255, 255, 0.1)',
-                                    color: 'rgba(255, 255, 255, 0.3)',
+                                    background: 'var(--seismic-canvas)',
+                                    border: '1px dashed var(--seismic-hairline)',
+                                    color: 'var(--seismic-ash)',
                                     opacity: 0.7,
                                 };
                             }
@@ -447,38 +445,35 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                             gap: 12,
                             marginBottom: 16,
                             padding: '14px 18px',
-                            background: 'linear-gradient(135deg, rgba(56, 189, 248, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%)',
+                            background: 'var(--seismic-soft)',
                             borderRadius: 'var(--border-radius)',
-                            border: '1px solid rgba(56, 189, 248, 0.3)',
+                            border: '1px solid var(--seismic-hairline)',
                             textDecoration: 'none',
-                            color: 'var(--seismic-white)',
+                            color: 'var(--seismic-ink)',
                             cursor: 'pointer',
                             transition: 'all 0.3s ease',
                             position: 'relative',
                             overflow: 'hidden',
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.border = '1px solid rgba(56, 189, 248, 0.6)';
-                            e.currentTarget.style.boxShadow = '0 0 20px rgba(56, 189, 248, 0.15)';
-                            e.currentTarget.style.transform = 'translateY(-1px)';
+                            e.currentTarget.style.border = '1px solid var(--seismic-ink)';
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.border = '1px solid rgba(56, 189, 248, 0.3)';
-                            e.currentTarget.style.boxShadow = 'none';
-                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.border = '1px solid var(--seismic-hairline)';
                         }}
                     >
                         <div style={{
                             width: 36,
                             height: 36,
-                            borderRadius: '50%',
-                            background: 'rgba(56, 189, 248, 0.15)',
+                            borderRadius: 4,
+                            background: 'var(--seismic-canvas)',
+                            border: '1px solid var(--seismic-hairline)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             flexShrink: 0,
                         }}>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--seismic-plum)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M22 10v6M2 10l10-5 10 5-10 5z" />
                                 <path d="M6 12v5c0 1.1 2.7 3 6 3s6-1.9 6-3v-5" />
                             </svg>
@@ -488,7 +483,7 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                                 Learn About Seismic
                             </div>
                             <div style={{ fontSize: '0.75rem', color: 'var(--seismic-gray-400)' }}>
-                                Complete the learning module and earn the <span style={{ color: '#38bdf8', fontWeight: 500 }}>Seismic Scholar</span> badge
+                                Complete the learning module and earn the <span style={{ color: 'var(--seismic-plum)', fontWeight: 500 }}>Seismic Scholar</span> badge
                             </div>
                         </div>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--seismic-gray-500)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
@@ -500,9 +495,9 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                 <div className="grid-stats" style={{
                     marginBottom: 24,
                     padding: 20,
-                    background: `color-mix(in srgb, ${themeColor} 10%, #151515)`,
+                    background: 'var(--seismic-soft)',
                     borderRadius: 'var(--border-radius)',
-                    border: `1px solid ${themeColor}30`,
+                    border: '1px solid var(--seismic-hairline)',
                 }}>
                     <div className="text-center">
                         <div className="stat-value text-primary">{privacy ? '****' : user.total_messages.toLocaleString()}</div>
@@ -532,7 +527,7 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                         )}
                     </div>
                     <div className="text-center">
-                        <div className="stat-value" style={{ color: '#60d394' }}>{privacy ? '****' : (user.general_chat + user.devnet_chat + user.report_chat).toLocaleString()}</div>
+                        <div className="stat-value" style={{ color: 'var(--seismic-plum-deep)' }}>{privacy ? '****' : (user.general_chat + user.devnet_chat + user.report_chat).toLocaleString()}</div>
                         <div className="stat-label">Total Chat</div>
                         <div className="text-muted" style={{ fontSize: '0.6rem', marginTop: 2 }}>General + Devnet + Report only</div>
                     </div>
@@ -544,17 +539,17 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                         textAlign: 'center',
                         padding: 14,
                         marginBottom: 16,
-                        background: `linear-gradient(135deg, ${themeColor} 0%, ${themeColor}CC 50%, ${themeColor}99 100%)`,
+                        background: 'var(--seismic-ink)',
                         borderRadius: 'var(--border-radius)',
-                        color: 'var(--seismic-white)',
-                        border: `1px solid ${themeColor}`,
-                        boxShadow: `0 4px 20px ${themeColor}50`
+                        color: 'var(--seismic-canvas)',
+                        border: '1px solid var(--seismic-ink)',
+                        boxShadow: 'none'
                     }}>
-                        <div style={{ fontSize: '0.875rem', opacity: 0.95, marginBottom: 4, textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>You are in the</div>
-                        <div style={{ fontSize: '1.75rem', fontWeight: 700, fontFamily: 'monospace', textShadow: '0 2px 4px rgba(0,0,0,0.4)' }}>
+                        <div style={{ fontSize: '0.875rem', opacity: 0.95, marginBottom: 4 }}>You are in the</div>
+                        <div style={{ fontSize: '1.75rem', fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
                             Top {(100 - parseFloat(percentile)).toFixed(2)}%
                         </div>
-                        <div style={{ fontSize: '0.8125rem', opacity: 0.9, textShadow: '0 1px 2px rgba(0,0,0,0.3)' }}>of all contributors</div>
+                        <div style={{ fontSize: '0.8125rem', opacity: 0.9 }}>of all contributors</div>
                     </div>
 
                 )}
@@ -565,13 +560,13 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                         textAlign: 'center',
                         padding: 14,
                         marginBottom: 16,
-                        background: `rgba(0,0,0,0.3)`,
+                        background: 'var(--seismic-soft)',
                         borderRadius: 'var(--border-radius)',
                         color: 'var(--seismic-gray-400)',
-                        border: `1px dashed var(--seismic-gray-700)`,
+                        border: '1px dashed var(--seismic-hairline)',
                     }}>
                         <div style={{ fontSize: '0.875rem', opacity: 0.8, marginBottom: 4 }}>Rank Percentile</div>
-                        <div style={{ fontSize: '1.5rem', fontWeight: 700, fontFamily: 'monospace', letterSpacing: 4 }}>
+                        <div style={{ fontSize: '1.5rem', fontWeight: 700, fontFamily: 'var(--font-mono)', letterSpacing: 4 }}>
                             ****
                         </div>
                         <div style={{ fontSize: '0.75rem', opacity: 0.7 }}>Encrypted for privacy</div>
@@ -583,9 +578,9 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                     <div style={{
                         marginBottom: 16,
                         padding: 14,
-                        background: `color-mix(in srgb, ${themeColor} 8%, #151515)`,
+                        background: 'var(--seismic-soft)',
                         borderRadius: 'var(--border-radius)',
-                        border: `1px dashed ${themeColor}`
+                        border: '1px dashed var(--seismic-hairline)'
                     }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, padding: '0 12px' }}>
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -604,7 +599,7 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                                     </div>
                                 )}
                             </div>
-                            <div style={{ fontSize: '1.5rem', color: 'var(--seismic-gray-500)', marginTop: 12 }}>→</div>
+                            <div style={{ fontSize: '1.5rem', color: 'var(--seismic-gray-500)', marginTop: 12 }}>-&gt;</div>
                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
                                 <div className="text-muted" style={{ fontSize: '0.75rem', marginBottom: 6 }}>Next Goal</div>
                                 {getRoleIconPath(`Magnitude ${nextMagInfo.nextMagnitude}.0`) && (
@@ -631,27 +626,27 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                         <div style={{ marginBottom: 16 }}>
                             <h4 style={{ marginBottom: 12, color: themeColor, fontSize: '1rem' }}>Activity Breakdown</h4>
                             <div className="grid-activity">
-                                <div style={{ padding: 16, background: `color-mix(in srgb, ${themeColor} 8%, #151515)`, borderRadius: 'var(--border-radius-sm)', border: `1px solid ${themeColor}20` }}>
+                                <div style={{ padding: 16, background: 'var(--seismic-soft)', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--seismic-hairline)' }}>
                                     <div className="text-muted" style={{ fontSize: '0.875rem', marginBottom: 4 }}>First Activity</div>
-                                    <div className="font-medium" style={{ color: 'var(--seismic-white)' }}>
+                                    <div className="font-medium" style={{ color: 'var(--seismic-ink)' }}>
                                         {formatDate(user.first_message_date)}
                                     </div>
                                 </div>
-                                <div style={{ padding: 16, background: `color-mix(in srgb, ${themeColor} 8%, #151515)`, borderRadius: 'var(--border-radius-sm)', border: `1px solid ${themeColor}20` }}>
+                                <div style={{ padding: 16, background: 'var(--seismic-soft)', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--seismic-hairline)' }}>
                                     <div className="text-muted" style={{ fontSize: '0.875rem', marginBottom: 4 }}>Last Activity</div>
-                                    <div className="font-medium" style={{ color: 'var(--seismic-white)' }}>
+                                    <div className="font-medium" style={{ color: 'var(--seismic-ink)' }}>
                                         {formatDate(user.last_message_date)}
                                     </div>
                                 </div>
-                                <div style={{ padding: 16, background: `color-mix(in srgb, ${themeColor} 8%, #151515)`, borderRadius: 'var(--border-radius-sm)', border: `1px solid ${themeColor}20` }}>
+                                <div style={{ padding: 16, background: 'var(--seismic-soft)', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--seismic-hairline)' }}>
                                     <div className="text-muted" style={{ fontSize: '0.875rem', marginBottom: 4 }}>Active Days</div>
-                                    <div className="font-medium" style={{ color: 'var(--seismic-white)' }}>
+                                    <div className="font-medium" style={{ color: 'var(--seismic-ink)' }}>
                                         {activityDays ? `${activityDays} days` : 'N/A'}
                                     </div>
                                 </div>
-                                <div style={{ padding: 16, background: `color-mix(in srgb, ${themeColor} 8%, #151515)`, borderRadius: 'var(--border-radius-sm)', border: `1px solid ${themeColor}20` }}>
+                                <div style={{ padding: 16, background: 'var(--seismic-soft)', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--seismic-hairline)' }}>
                                     <div className="text-muted" style={{ fontSize: '0.875rem', marginBottom: 4 }}>Avg. per Day</div>
-                                    <div className="font-medium" style={{ color: 'var(--seismic-white)' }}>
+                                    <div className="font-medium" style={{ color: 'var(--seismic-ink)' }}>
                                         {privacy ? '****' : messagesPerDay} Contributions/Day
                                     </div>
                                 </div>
@@ -666,21 +661,21 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                                 height: 12,
                                 borderRadius: 6,
                                 overflow: 'hidden',
-                                background: 'var(--seismic-gray-800)'
+                                background: 'var(--seismic-hairline)'
                             }}>
                                 {user.total_messages > 0 && (
                                     <>
                                         <div
                                             style={{
                                                 width: `${(user.tweet / user.total_messages) * 100}%`,
-                                                background: '#60a5fa', // Blue for Tweets
+                                                background: 'var(--seismic-plum)',
                                             }}
                                             title={`Tweets: ${((user.tweet / user.total_messages) * 100).toFixed(1)}%`}
                                         />
                                         <div
                                             style={{
                                                 width: `${(user.art / user.total_messages) * 100}%`,
-                                                background: '#f472b6', // Pink for Art
+                                                background: 'var(--seismic-plum-deep)',
                                             }}
                                             title={`Art: ${((user.art / user.total_messages) * 100).toFixed(1)}%`}
                                         />
@@ -689,13 +684,13 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                             </div>
                             <div style={{ display: 'flex', justifyContent: 'center', gap: 24, marginTop: 8 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    <span style={{ width: 8, height: 8, borderRadius: 2, background: '#60a5fa' }} />
+                                    <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--seismic-plum)' }} />
                                     <span className="text-muted" style={{ fontSize: '0.75rem' }}>
                                         Tweet ({user.total_messages > 0 ? ((user.tweet / user.total_messages) * 100).toFixed(0) : 0}%)
                                     </span>
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    <span style={{ width: 8, height: 8, borderRadius: 2, background: '#f472b6' }} />
+                                    <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--seismic-plum-deep)' }} />
                                     <span className="text-muted" style={{ fontSize: '0.75rem' }}>
                                         Art ({user.total_messages > 0 ? ((user.art / user.total_messages) * 100).toFixed(0) : 0}%)
                                     </span>
@@ -713,15 +708,15 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                                     gap: 8,
                                 }}>
                                     {[
-                                        { label: 'General', value: user.general_chat, color: '#60d394' },
-                                        { label: 'Devnet', value: user.devnet_chat, color: '#90b4f8' },
-                                        { label: 'Report', value: user.report_chat, color: '#f48c8c' },
+                                        { label: 'General', value: user.general_chat, color: 'var(--seismic-ink)' },
+                                        { label: 'Devnet', value: user.devnet_chat, color: 'var(--seismic-plum)' },
+                                        { label: 'Report', value: user.report_chat, color: 'var(--seismic-plum-deep)' },
                                     ].map((ch) => (
                                         <div key={ch.label} style={{
                                             padding: 12,
-                                            background: `color-mix(in srgb, ${themeColor} 8%, #151515)`,
+                                            background: 'var(--seismic-soft)',
                                             borderRadius: 'var(--border-radius-sm)',
-                                            border: `1px solid ${themeColor}20`,
+                                            border: '1px solid var(--seismic-hairline)',
                                             textAlign: 'center',
                                         }}>
                                             <div className="font-medium" style={{ color: ch.color, fontSize: '1.1rem' }}>
@@ -768,7 +763,7 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                 <div style={{
                     marginTop: 14,
                     paddingTop: 12,
-                    borderTop: '1px solid var(--seismic-gray-800)',
+                    borderTop: '1px solid var(--seismic-hairline)',
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
@@ -810,21 +805,19 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
                                 <button
                                     onClick={() => setShowCardImage(false)}
                                     style={{
-                                        background: 'rgba(0, 0, 0, 0.6)',
-                                        border: '1px solid var(--seismic-gray-700)',
-                                        borderRadius: '50%',
+                                        background: 'var(--seismic-canvas)',
+                                        border: '1px solid var(--seismic-hairline)',
+                                        borderRadius: 4,
                                         width: 32,
                                         height: 32,
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        color: 'var(--seismic-white)',
+                                        color: 'var(--seismic-ink)',
                                         fontSize: 16,
                                         cursor: 'pointer',
                                     }}
-                                >
-                                    ✕
-                                </button>
+                                >x</button>
                             </div>
                             <UserCardImage user={user} rankInfo={rankInfo} />
                         </div>
@@ -834,3 +827,5 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
         </div >
     );
 }
+
+

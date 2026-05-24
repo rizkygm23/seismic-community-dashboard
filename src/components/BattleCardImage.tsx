@@ -422,9 +422,10 @@ export default function BattleCardImage(props: BattleCardImageProps) {
     return (
         <div style={{ maxWidth: 700, margin: '0 auto' }}>
             <div style={{
-                borderRadius: 16,
+                borderRadius: 4,
+                border: '1px solid var(--seismic-hairline)',
                 overflow: 'hidden',
-                boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                boxShadow: 'none',
             }}>
                 <canvas
                     ref={canvasRef}
@@ -432,7 +433,7 @@ export default function BattleCardImage(props: BattleCardImageProps) {
                         display: 'block',
                         width: '100%',
                         height: 'auto',
-                        borderRadius: 16,
+                        borderRadius: 4,
                     }}
                 />
             </div>
@@ -494,9 +495,9 @@ export default function BattleCardImage(props: BattleCardImageProps) {
                             padding: '14px 10px',
                             fontSize: '0.8rem',
                             cursor: 'pointer',
-                            backgroundColor: '#000',
-                            borderColor: '#333',
-                            color: '#fff',
+                            backgroundColor: 'var(--seismic-ink)',
+                            borderColor: 'var(--seismic-ink)',
+                            color: 'var(--seismic-canvas)',
                         }}
                     >
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">

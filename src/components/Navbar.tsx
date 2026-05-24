@@ -1,47 +1,31 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect } from 'react';
+import { BarChart3, Globe2, Menu, Search, Trophy, X } from 'lucide-react';
 
 const links = [
     {
-        href: '/',
+        href: '/#search',
         label: 'Search',
-        icon: (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-        ),
+        Icon: Search,
     },
     {
-        href: '/leaderboard',
+        href: '/#leaderboard',
         label: 'Leaderboard',
-        icon: (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M8 21v-6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v6" />
-                <path d="M12 3v4" /><path d="M4 15v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" /><path d="M6 11l6-8 6 8" />
-            </svg>
-        ),
+        Icon: Trophy,
     },
     {
-        href: '/stats',
+        href: '/#statistics',
         label: 'Statistics',
-        icon: (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M3 3v18h18" /><path d="M18 17V9" /><path d="M13 17V5" /><path d="M8 17v-3" />
-            </svg>
-        ),
+        Icon: BarChart3,
     },
     {
-        href: '/global',
+        href: '/#global',
         label: 'Global',
-        icon: (
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" />
-                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-            </svg>
-        ),
+        Icon: Globe2,
     },
 
 ];
@@ -49,10 +33,21 @@ const links = [
 export default function Navbar() {
     const pathname = usePathname();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [activeHash, setActiveHash] = useState('#search');
 
     // Close mobile menu on route change
     useEffect(() => {
         setMobileMenuOpen(false);
+    }, [pathname]);
+
+    useEffect(() => {
+        const syncHash = () => {
+            setActiveHash(window.location.hash || '#search');
+        };
+
+        syncHash();
+        window.addEventListener('hashchange', syncHash);
+        return () => window.removeEventListener('hashchange', syncHash);
     }, [pathname]);
 
     // Prevent body scroll when mobile menu is open
@@ -71,25 +66,32 @@ export default function Navbar() {
                 <div className="container nav-content">
                     {/* Logo */}
                     <Link href="/" className="nav-brand">
-                        <img
+                        <Image
                             src="/logo/logoseismic.png"
-                            alt="Seismic Community"
-                            style={{ height: 32, width: 32, borderRadius: 8 }}
+                            alt="Seismic logo"
+                            width={32}
+                            height={32}
+                            priority
+                            className="block rounded-[4px] object-contain bg-[var(--seismic-canvas)]"
                         />
-                        <span className="nav-brand-text">Seismic Community</span>
+                        <span className="nav-brand-text">seismic.community</span>
                     </Link>
 
                     {/* Desktop Navigation */}
                     <div className="nav-links">
                         {links.map((link) => {
-                            const isActive = pathname === link.href;
+                            const linkHash = `#${link.href.split('#')[1]}`;
+                            const isActive = pathname === '/' && activeHash === linkHash;
+                            const Icon = link.Icon;
                             return (
                                 <Link
                                     key={link.href}
                                     href={link.href}
                                     className={`nav-link ${isActive ? 'active' : ''}`}
                                 >
-                                    <span className="nav-link-icon">{link.icon}</span>
+                                    <span className="nav-link-icon">
+                                        <Icon size={16} strokeWidth={1.8} />
+                                    </span>
                                     {link.label}
                                 </Link>
                             );
@@ -102,20 +104,7 @@ export default function Navbar() {
                         onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                         aria-label="Toggle navigation menu"
                     >
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            {mobileMenuOpen ? (
-                                <>
-                                    <path d="M18 6 6 18" />
-                                    <path d="m6 6 12 12" />
-                                </>
-                            ) : (
-                                <>
-                                    <path d="M4 12h16" />
-                                    <path d="M4 6h16" />
-                                    <path d="M4 18h16" />
-                                </>
-                            )}
-                        </svg>
+                        {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
                     </button>
                 </div>
             </nav>
@@ -127,7 +116,9 @@ export default function Navbar() {
             <div className={`mobile-menu ${mobileMenuOpen ? 'open' : ''}`}>
                 <div style={{ padding: '24px 0' }}>
                     {links.map((link) => {
-                        const isActive = pathname === link.href;
+                        const linkHash = `#${link.href.split('#')[1]}`;
+                        const isActive = pathname === '/' && activeHash === linkHash;
+                        const Icon = link.Icon;
                         return (
                             <Link
                                 key={link.href}
@@ -135,7 +126,9 @@ export default function Navbar() {
                                 className={`mobile-menu-link ${isActive ? 'active' : ''}`}
                                 onClick={() => setMobileMenuOpen(false)}
                             >
-                                <span style={{ display: 'flex', alignItems: 'center' }}>{link.icon}</span>
+                                <span style={{ display: 'flex', alignItems: 'center' }}>
+                                    <Icon size={16} strokeWidth={1.8} />
+                                </span>
                                 {link.label}
                             </Link>
                         );

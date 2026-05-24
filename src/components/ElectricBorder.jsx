@@ -280,17 +280,16 @@ const ElectricBorder = ({
       <div className="absolute inset-0 rounded-[inherit] pointer-events-none z-0">
         <div
           className="absolute inset-0 rounded-[inherit] pointer-events-none"
-          style={{ border: `2px solid ${hexToRgba(color, 0.6)}`, filter: 'blur(1px)' }}
+          style={{ border: `1px solid ${hexToRgba(color, 0.55)}` }}
         />
         <div
           className="absolute inset-0 rounded-[inherit] pointer-events-none"
-          style={{ border: `2px solid ${color}`, filter: 'blur(4px)' }}
+          style={{ border: `1px solid ${color}` }}
         />
         <div
-          className="absolute inset-0 rounded-[inherit] pointer-events-none -z-[1] scale-110 opacity-30"
+          className="absolute inset-0 rounded-[inherit] pointer-events-none -z-[1] opacity-0"
           style={{
-            filter: 'blur(32px)',
-            background: `linear-gradient(-30deg, ${color}, transparent, ${color})`
+            background: 'transparent'
           }}
         />
       </div>

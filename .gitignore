@@ -29,6 +29,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+.next-dev-*.err.log
+.next-dev-*.out.log
 
 # env files (can opt-in for committing if needed)
 .env*
@@ -39,3 +41,28 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+Thumbs.db
+Desktop.ini
+
+# build logs
+build_log.txt
+
+# QA screenshots
+qa-*.png
+
+# SQL migration scripts (track these separately or in a migrations folder)
+*.sql
+
+# scratch / temporary files
+contoh.tsx
+fix_imports.js
+stats-worker.js

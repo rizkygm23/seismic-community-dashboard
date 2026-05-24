@@ -3,7 +3,7 @@ export default function Watermark() {
         <div style={{
             marginTop: 20,
             paddingTop: 16,
-            borderTop: '1px solid var(--seismic-gray-800)',
+            borderTop: '1px solid var(--seismic-hairline)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',

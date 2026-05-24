@@ -75,22 +75,20 @@ export default function UserDetailModal({ user: initialUser, onClose }: UserDeta
                     <button
                         onClick={onClose}
                         style={{
-                            background: 'rgba(0, 0, 0, 0.5)',
-                            border: '1px solid var(--seismic-gray-700)',
-                            borderRadius: '50%',
+                            background: 'var(--seismic-canvas)',
+                            border: '1px solid var(--seismic-hairline)',
+                            borderRadius: 4,
                             width: 32,
                             height: 32,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            color: 'var(--seismic-white)',
+                            color: 'var(--seismic-ink)',
                             fontSize: 16,
                             cursor: 'pointer',
                             transition: 'all 0.2s ease',
                         }}
-                    >
-                        ✕
-                    </button>
+                    >x</button>
                 </div>
 
                 <div className="card-animate-enter" style={{ overflowY: 'auto', borderRadius: 'var(--border-radius-lg)', paddingRight: 4 }}>
@@ -111,3 +109,4 @@ export default function UserDetailModal({ user: initialUser, onClose }: UserDeta
         </div>
     );
 }
+

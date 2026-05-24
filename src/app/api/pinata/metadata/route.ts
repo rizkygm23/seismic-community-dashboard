@@ -1,8 +1,16 @@
 import { NextResponse } from 'next/server';
 import axios from 'axios';
 
+export const runtime = 'nodejs';
+
+const PINATA_TIMEOUT_MS = 60 * 1000;
+
 export async function POST(req: Request) {
     try {
+        if (!process.env.PINATA_API_KEY || !process.env.PINATA_SECRET_API_KEY) {
+            return NextResponse.json({ error: 'Pinata credentials are not configured' }, { status: 500 });
+        }
+
         const metadataInfo = await req.json();
 
         const response = await axios.post(
@@ -14,6 +22,7 @@ export async function POST(req: Request) {
                     pinata_api_key: process.env.PINATA_API_KEY,
                     pinata_secret_api_key: process.env.PINATA_SECRET_API_KEY,
                 },
+                timeout: PINATA_TIMEOUT_MS,
             }
         );
 
