@@ -7,6 +7,13 @@ import UserCard from './UserCard';
 import { LoaderFive } from "@/components/ui/loader";
 import { User } from '@supabase/supabase-js';
 import banList from '@/data/ban_list.json';
+import {
+    cleanSupabaseAuthRedirectUrl,
+    getSupabaseAuthRedirectCleanUrl,
+    getDiscordAuthRedirectUrl,
+    rememberAuthRedirectCleanUrl,
+    takeAuthRedirectCleanUrl,
+} from '@/lib/authRedirect';
 
 export default function UserSearch() {
     const [user, setUser] = useState<User | null>(null);
@@ -20,30 +27,17 @@ export default function UserSearch() {
         const checkSession = async () => {
             setLoading(true);
 
-            // Handle hash fragment manually if present (often happens with OAuth redirects)
-            const hash = window.location.hash;
-            if (hash && hash.includes('access_token')) {
-                try {
-                    // This helps ensure the session is established from the URL fragments
-                    const { data, error } = await supabase.auth.getSession();
-                    if (data.session) {
-                        setUser(data.session.user);
-                        userIdRef.current = data.session.user.id;
-                        await fetchDbUser(data.session.user);
-                        // Clean URL
-                        window.history.replaceState(null, '', window.location.pathname);
-                    }
-                } catch (e) {
-                    console.error("Error processing auth hash:", e);
-                }
-            }
-
             try {
                 const { data: { session } } = await supabase.auth.getSession();
                 if (session?.user) {
                     setUser(session.user);
                     userIdRef.current = session.user.id;
                     await fetchDbUser(session.user);
+                    const cleanUrl = takeAuthRedirectCleanUrl() || getSupabaseAuthRedirectCleanUrl(window.location.href);
+
+                    if (cleanUrl) {
+                        window.history.replaceState(window.history.state, '', cleanUrl);
+                    }
                 }
             } catch (err) {
                 console.error('Session check error:', err);
@@ -87,7 +81,7 @@ export default function UserSearch() {
                 // Fallback to username matching if ID isn't found (unlikely for Discord OAuth)
                 const username = authUser.user_metadata.full_name || authUser.user_metadata.name;
                 if (username) {
-                    const { data, error } = await supabase
+                    const { data } = await supabase
                         .from('seismic_dc_user')
                         .select('*')
                         .ilike('username', username)
@@ -96,15 +90,17 @@ export default function UserSearch() {
                         .limit(1)
                         .single();
 
-                    if (data) {
+                    const matchedUser = data as unknown as SeismicUser | null;
+
+                    if (matchedUser) {
                         const isBanned = banList.some((bannedName: string) =>
-                            bannedName.toLowerCase() === (data as any).username.toLowerCase() ||
+                            bannedName.toLowerCase() === matchedUser.username.toLowerCase() ||
                             bannedName.toLowerCase() === username.toLowerCase()
                         );
                         if (isBanned) {
                             setError("Data not found or you don't have permission to view it.");
                         } else {
-                            setDbUser(data);
+                            setDbUser(matchedUser);
                         }
                     } else {
                         setError(`Could not find stats for @${username}. You may not have been active recently.`);
@@ -139,15 +135,17 @@ export default function UserSearch() {
                         .limit(1)
                         .single();
 
-                    if (nameData) {
+                    const matchedUser = nameData as unknown as SeismicUser | null;
+
+                    if (matchedUser) {
                         const isBanned = banList.some((bannedName: string) =>
-                            bannedName.toLowerCase() === (nameData as any).username.toLowerCase() ||
+                            bannedName.toLowerCase() === matchedUser.username.toLowerCase() ||
                             bannedName.toLowerCase() === username.toLowerCase()
                         );
                         if (isBanned) {
                             setError("Data not found or you don't have permission to view it.");
                         } else {
-                            setDbUser(nameData);
+                            setDbUser(matchedUser);
                         }
                     } else {
                         setError(`Welcome, ${username}! We couldn't find your stats yet. Data is synced periodically.`);
@@ -156,19 +154,20 @@ export default function UserSearch() {
                     setError("Welcome! We couldn't find your stats in our database yet.");
                 }
             } else {
+                const matchedUser = data as unknown as SeismicUser;
                 const authUsername = authUser.user_metadata.custom_claims?.global_name ||
                     authUser.user_metadata.full_name ||
                     authUser.user_metadata.name;
 
                 const isBanned = banList.some((bannedName: string) =>
-                    bannedName.toLowerCase() === (data as any).username.toLowerCase() ||
+                    bannedName.toLowerCase() === matchedUser.username.toLowerCase() ||
                     (authUsername && bannedName.toLowerCase() === authUsername.toLowerCase())
                 );
 
                 if (isBanned) {
                     setError("Data not found or you don't have permission to view it.");
                 } else {
-                    setDbUser(data);
+                    setDbUser(matchedUser);
                 }
             }
         } catch (err) {
@@ -181,17 +180,19 @@ export default function UserSearch() {
 
     const handleLogin = async () => {
         try {
+            rememberAuthRedirectCleanUrl(cleanSupabaseAuthRedirectUrl(window.location.href));
+
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'discord',
                 options: {
-                    redirectTo: window.location.href, // Redirect back to current page
+                    redirectTo: getDiscordAuthRedirectUrl(window.location.origin),
                     scopes: 'identify', // Basic identity scope
                 },
             });
             if (error) throw error;
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error('Login error:', err);
-            setError(err.message || 'Failed to initiate login');
+            setError(err instanceof Error ? err.message : 'Failed to initiate login');
         }
     };
 
