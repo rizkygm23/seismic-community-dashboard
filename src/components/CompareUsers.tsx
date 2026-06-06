@@ -158,13 +158,14 @@ function CompareStatBar({ label, val1, val2, rank1, rank2, icon }: {
 
 // ── Activity Timeline ─────────────────────────────────────────────
 function ActivityTimeline({ user1, user2 }: { user1: SeismicUser; user2: SeismicUser }) {
+    const [now] = useState(() => Date.now());
     const formatDate = (d: string | null) => {
         if (!d) return 'N/A';
         return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     };
     const daysSince = (d: string | null) => {
         if (!d) return null;
-        return Math.floor((Date.now() - new Date(d).getTime()) / (1000 * 60 * 60 * 24));
+        return Math.floor((now - new Date(d).getTime()) / (1000 * 60 * 60 * 24));
     };
     const items = [
         { label: 'Account Created', u1: user1.account_created, u2: user2.account_created },
@@ -333,9 +334,9 @@ function QuickStat({ label, val1, val2 }: { label: string; val1: string | number
     );
 }
 
-function calcAvgPerDay(user: SeismicUser): string {
+function calcAvgPerDay(user: SeismicUser, now: number): string {
     if (!user.first_message_date || user.total_messages === 0) return '0';
-    const days = Math.max(1, Math.floor((Date.now() - new Date(user.first_message_date).getTime()) / (1000 * 60 * 60 * 24)));
+    const days = Math.max(1, Math.floor((now - new Date(user.first_message_date).getTime()) / (1000 * 60 * 60 * 24)));
     return (user.total_messages / days).toFixed(1);
 }
 
@@ -410,6 +411,7 @@ export default function CompareUsers() {
     const [shuffleNames, setShuffleNames] = useState<string[]>([]);
 
     const debounceRef = useRef<NodeJS.Timeout | null>(null);
+    const [now] = useState(() => Date.now());
 
     // ── Search ────────────────────────────────────────────────────
     const searchUser = async (q: string) => {
@@ -828,7 +830,7 @@ export default function CompareUsers() {
                         <div className="compare-section">
                             <div className="compare-section-title">Engagement Stats</div>
                             <div className="compare-quick-stats">
-                                <QuickStat label="Avg Contributions/Day" val1={calcAvgPerDay(compareResult.user1)} val2={calcAvgPerDay(compareResult.user2)} />
+                                <QuickStat label="Avg Contributions/Day" val1={calcAvgPerDay(compareResult.user1, now)} val2={calcAvgPerDay(compareResult.user2, now)} />
                                 <QuickStat label="Total Chat*"
                                     val1={(compareResult.user1.general_chat + compareResult.user1.devnet_chat + compareResult.user1.report_chat).toLocaleString()}
                                     val2={(compareResult.user2.general_chat + compareResult.user2.devnet_chat + compareResult.user2.report_chat).toLocaleString()} />
@@ -927,6 +929,8 @@ function StepStats({ result }: { result: CompareResult }) {
 }
 
 function StepTimeline({ result }: { result: CompareResult }) {
+    const [now] = useState(() => Date.now());
+
     return (
         <div className="compare-section">
             <div className="compare-timeline-header">
@@ -936,7 +940,7 @@ function StepTimeline({ result }: { result: CompareResult }) {
             <ActivityTimeline user1={result.user1} user2={result.user2} />
             <div style={{ marginTop: 20 }}>
                 <div className="compare-quick-stats">
-                    <QuickStat label="Avg Contributions/Day" val1={calcAvgPerDay(result.user1)} val2={calcAvgPerDay(result.user2)} />
+                    <QuickStat label="Avg Contributions/Day" val1={calcAvgPerDay(result.user1, now)} val2={calcAvgPerDay(result.user2, now)} />
                     <QuickStat label="Total Chat*"
                         val1={(result.user1.general_chat + result.user1.devnet_chat + result.user1.report_chat).toLocaleString()}
                         val2={(result.user2.general_chat + result.user2.devnet_chat + result.user2.report_chat).toLocaleString()} />

@@ -5,7 +5,6 @@ import { useEffect, useState, useRef } from 'react';
 import { getRoleIconPath, getHighestRoleIcon } from '@/lib/roleUtils';
 import { MAGNITUDE_COLORS, DEFAULT_THEME_COLOR } from '@/lib/constants';
 import UserCardImage from './UserCardImage';
-// @ts-ignore - Importing JS component
 import ElectricBorder from './ElectricBorder';
 import { getUserBadges } from '@/lib/badgeUtils';
 import { communityApi, RankInfo } from '@/lib/communityApi';

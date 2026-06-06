@@ -162,7 +162,7 @@ export default function RoleExplorer() {
                 <div className="card fade-in" style={{ marginTop: 16 }}>
                     <div className="card-header">
                         <h3 className="card-title">
-                            Members with "{selectedRole}"
+                            Members with &quot;{selectedRole}&quot;
                         </h3>
                         <span className="badge">{roleMembers.length} shown</span>
                     </div>
