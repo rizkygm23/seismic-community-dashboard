@@ -1,11 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
-import { LeaderboardUser, SeismicUser } from '@/types/database_manual';
+import { LeaderboardUser } from '@/types/database_manual';
 import { getHighestRoleIcon } from '@/lib/roleUtils';
-import { getAllUserBadges, Badge } from '@/lib/badgeUtils';
 import UserDetailModal from './UserDetailModal';
+import { communityApi } from '@/lib/communityApi';
 
 export default function Leaderboard() {
     const [users, setUsers] = useState<LeaderboardUser[]>([]);
@@ -21,114 +20,8 @@ export default function Leaderboard() {
         const currentPage = reset ? 1 : page;
 
         try {
-            // 1. Get total user count for rank calculation
-            const { count: totalUsers, error: countError } = await supabase
-                .from('seismic_dc_user')
-                .select('*', { count: 'exact', head: true })
-                .eq('is_bot', false);
-
-            if (countError) throw countError;
-
-            // 2. Fetch top users sorted by TOTAL MESSAGES to establish contribution rank
-            // We fetch a larger limit to ensure we capture badge holders (Top 1% badges depend on this order)
-            const { data, error } = await supabase
-                .from('seismic_dc_user')
-                .select('id, user_id, username, x_username, display_name, avatar_url, roles, tweet, art, total_messages, general_chat, magnitude_chat, devnet_chat, report_chat, joined_at, first_message_date, last_message_date, region')
-                .eq('is_bot', false)
-                .order('total_messages', { ascending: false })
-                .limit(1000);
-
-            if (error) throw error;
-
-            interface UserRow {
-                id: number;
-                user_id: string;
-                username: string;
-                x_username: string | null;
-                display_name: string | null;
-                avatar_url: string | null;
-                roles: string[] | null;
-                tweet: number;
-                art: number;
-                total_messages: number;
-                general_chat: number;
-                magnitude_chat: number;
-                devnet_chat: number;
-                report_chat: number;
-                joined_at: string | null;
-                first_message_date: string | null;
-                last_message_date: string | null;
-                region: string | null;
-            }
-
-            let rows = (data || []) as UserRow[];
-
-            // 3. Calculate badges for each user
-            // We pass the index+1 as their 'contribution rank' since we sorted by total_messages
-            const rowsWithBadges = rows.map((row, index) => {
-                const userForBadges = {
-                    ...row,
-                } as unknown as SeismicUser;
-
-                // Calculate all badges including achievements
-                const badges = getAllUserBadges(userForBadges, {
-                    rank: index + 1,
-                    totalUsers: totalUsers || 1
-                });
-
-                // Filter only achieved badges
-                const achievedBadges = badges.filter(b => b.achieved);
-
-                return {
-                    ...row,
-                    badgeCount: achievedBadges.length,
-                    // Store the badges for potential tooltip usage if needed, but count is main thing
-                };
-            });
-
-            // 4. Sort by Badge Count (Descending), then by Total Messages (Descending) as tie-breaker
-            rowsWithBadges.sort((a, b) => {
-                if (b.badgeCount !== a.badgeCount) {
-                    return b.badgeCount - a.badgeCount;
-                }
-                return b.total_messages - a.total_messages;
-            });
-
-            // 5. Paginate
-            const start = (currentPage - 1) * limit;
-            const paginatedRows = rowsWithBadges.slice(start, start + limit);
-
-            // Update hasMore based on slice
-            setHasMore(start + limit < rowsWithBadges.length);
-
-            // 6. Map to LeaderboardUser and assign Display Rank
-            const rankedData: LeaderboardUser[] = paginatedRows.map((user, index) => {
-                return {
-                    id: user.id,
-                    user_id: user.user_id,
-                    username: user.username,
-                    x_username: user.x_username || null,
-                    display_name: user.display_name,
-                    avatar_url: user.avatar_url,
-                    roles: user.roles,
-                    tweet: user.tweet,
-                    art: user.art,
-                    total_messages: user.total_messages,
-                    account_created: null, // Not fetched
-                    general_chat: user.general_chat || 0,
-                    magnitude_chat: user.magnitude_chat || 0,
-                    devnet_chat: user.devnet_chat || 0,
-                    report_chat: user.report_chat || 0,
-                    joined_at: user.joined_at,
-                    first_message_date: user.first_message_date,
-                    last_message_date: user.last_message_date,
-                    region: user.region || null,
-                    is_bot: false,
-                    is_learned: false,
-                    badgeCount: user.badgeCount,
-                    rank: start + index + 1, // This is the rank in the BADGE leaderboard
-                };
-            });
+            const { users: rankedData, hasMore } = await communityApi.getLeaderboard(currentPage, limit);
+            setHasMore(hasMore);
 
             if (reset) {
                 setUsers(rankedData);

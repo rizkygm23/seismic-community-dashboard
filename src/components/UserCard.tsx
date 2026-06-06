@@ -2,13 +2,13 @@
 import GlareHover from './GlareHover'
 import { SeismicUser } from '@/types/database_manual';
 import { useEffect, useState, useRef } from 'react';
-import { supabase } from '@/lib/supabase';
 import { getRoleIconPath, getHighestRoleIcon } from '@/lib/roleUtils';
 import { MAGNITUDE_COLORS, DEFAULT_THEME_COLOR } from '@/lib/constants';
 import UserCardImage from './UserCardImage';
 // @ts-ignore - Importing JS component
 import ElectricBorder from './ElectricBorder';
 import { getUserBadges } from '@/lib/badgeUtils';
+import { communityApi, RankInfo } from '@/lib/communityApi';
 
 interface UserCardProps {
     user: SeismicUser;
@@ -16,14 +16,6 @@ interface UserCardProps {
     showProfileLink?: boolean;
     compact?: boolean;
     privacy?: boolean;
-}
-
-interface RankInfo {
-    totalRank: number;
-    tweetRank: number;
-    artRank: number;
-    roleRank: number | null;
-    totalUsers: number;
 }
 
 export default function UserCard({ user, showDownload = true, showProfileLink = true, compact = false, privacy = false }: UserCardProps) {
@@ -55,49 +47,8 @@ export default function UserCard({ user, showDownload = true, showProfileLink = 
         async function fetchRanks() {
             setLoading(true);
             try {
-                const currentMag = getCurrentMagnitude();
-                const roleString = `Magnitude ${currentMag}.0`;
-
-                const queries = [
-                    supabase.from('seismic_dc_user').select('id', { count: 'exact', head: true }).eq('is_bot', false).contains('roles', ['Magnitude 1.0']).gt('total_messages', user.total_messages),
-                    supabase.from('seismic_dc_user').select('id', { count: 'exact', head: true }).eq('is_bot', false).contains('roles', ['Magnitude 1.0']).gt('tweet', user.tweet),
-                    supabase.from('seismic_dc_user').select('id', { count: 'exact', head: true }).eq('is_bot', false).contains('roles', ['Magnitude 1.0']).gt('art', user.art),
-                    supabase.from('seismic_dc_user').select('id', { count: 'exact', head: true }).eq('is_bot', false).contains('roles', ['Magnitude 1.0']),
-                ];
-
-                if (currentMag > 0) {
-                    let roleQuery = supabase.from('seismic_dc_user')
-                        .select('id', { count: 'exact', head: true })
-                        .eq('is_bot', false)
-                        .contains('roles', [roleString])
-                        .gt('total_messages', user.total_messages);
-
-                    // Isolate rank to users where this is their HIGHEST role
-                    // by excluding anyone who has the next magnitude
-                    if (currentMag < 10) {
-                        const nextMagString = `Magnitude ${currentMag + 1}.0`;
-                        // Using strict string format for Postgres array comparison
-                        roleQuery = roleQuery.not('roles', 'cs', `{"${nextMagString}"}`);
-                    }
-
-                    queries.push(roleQuery);
-                }
-
-                const results = await Promise.all(queries);
-
-                const totalRankResult = results[0];
-                const tweetRankResult = results[1];
-                const artRankResult = results[2];
-                const totalUsersResult = results[3];
-                const roleRankResult = currentMag > 0 ? results[4] : null;
-
-                setRankInfo({
-                    totalRank: (totalRankResult.count || 0) + 1,
-                    tweetRank: (tweetRankResult.count || 0) + 1,
-                    artRank: (artRankResult.count || 0) + 1,
-                    roleRank: roleRankResult ? (roleRankResult.count || 0) + 1 : null,
-                    totalUsers: totalUsersResult.count || 1,
-                });
+                const { rankInfo } = await communityApi.getUserCardRanks(user);
+                setRankInfo(rankInfo);
             } catch (error) {
                 console.error('Error fetching ranks:', error);
             } finally {

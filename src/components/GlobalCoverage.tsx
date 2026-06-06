@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { supabase } from '@/lib/supabase';
 import { LoaderFive } from '@/components/ui/loader';
 import { GlobeConfig } from '@/components/ui/globe';
+import { communityApi } from '@/lib/communityApi';
 
 const World = dynamic(() => import('@/components/ui/globe').then((m) => m.World), {
   ssr: false,
@@ -120,39 +120,7 @@ export default function GlobalCoverage({ showHeader = false }: { showHeader?: bo
   useEffect(() => {
     async function fetchRegions() {
       try {
-        const batchSize = 1000;
-        let offset = 0;
-        let hasMore = true;
-        const regionMap = new Map<string, { user_count: number; total_contributions: number }>();
-
-        while (hasMore) {
-          const { data } = await supabase
-            .from('seismic_dc_user')
-            .select('region, total_messages')
-            .eq('is_bot', false)
-            .not('region', 'is', null)
-            .range(offset, offset + batchSize - 1);
-
-          if (data && data.length > 0) {
-            data.forEach((row: { region: string | null; total_messages: number }) => {
-              if (!row.region) return;
-              const existing = regionMap.get(row.region) || { user_count: 0, total_contributions: 0 };
-              existing.user_count += 1;
-              existing.total_contributions += row.total_messages || 0;
-              regionMap.set(row.region, existing);
-            });
-
-            offset += batchSize;
-            hasMore = data.length === batchSize;
-          } else {
-            hasMore = false;
-          }
-        }
-
-        const regions = Array.from(regionMap.entries())
-          .map(([region, data]) => ({ region, ...data }))
-          .sort((a, b) => b.user_count - a.user_count);
-
+        const { regions } = await communityApi.getGlobalRegions();
         setRegionData(regions);
 
         const colors = ['#825a6d', '#523542', '#a4a3a1', '#d4d4d4', '#ffffff'];

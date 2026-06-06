@@ -7,6 +7,7 @@ import UserCard from './UserCard';
 import { LoaderFive } from "@/components/ui/loader";
 import { User } from '@supabase/supabase-js';
 import banList from '@/data/ban_list.json';
+import { communityApi } from '@/lib/communityApi';
 import {
     cleanSupabaseAuthRedirectUrl,
     getSupabaseAuthRedirectCleanUrl,
@@ -72,103 +73,33 @@ export default function UserSearch() {
         setLoading(true);
         setError(null);
         try {
-            // Get Discord ID from identities or metadata
-            // 'sub' in user_metadata is often the provider ID for OAuth
-            const discordId = authUser.user_metadata.sub ||
-                authUser.identities?.find(i => i.provider === 'discord')?.identity_data?.sub;
-
-            if (!discordId) {
-                // Fallback to username matching if ID isn't found (unlikely for Discord OAuth)
-                const username = authUser.user_metadata.full_name || authUser.user_metadata.name;
-                if (username) {
-                    const { data } = await supabase
-                        .from('seismic_dc_user')
-                        .select('*')
-                        .ilike('username', username)
-                        .eq('is_bot', false)
-                        .order('total_messages', { ascending: false })
-                        .limit(1)
-                        .single();
-
-                    const matchedUser = data as unknown as SeismicUser | null;
-
-                    if (matchedUser) {
-                        const isBanned = banList.some((bannedName: string) =>
-                            bannedName.toLowerCase() === matchedUser.username.toLowerCase() ||
-                            bannedName.toLowerCase() === username.toLowerCase()
-                        );
-                        if (isBanned) {
-                            setError("Data not found or you don't have permission to view it.");
-                        } else {
-                            setDbUser(matchedUser);
-                        }
-                    } else {
-                        setError(`Could not find stats for @${username}. You may not have been active recently.`);
-                    }
-                } else {
-                    setError("Could not retrieve Discord account details.");
-                }
-                setLoading(false);
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.access_token) {
+                setError("Could not verify your Discord login session.");
                 return;
             }
 
-            // Query by Discord ID (user_id column)
-            // Note: SeismicUser.user_id is the string Discord ID
-            const { data, error } = await supabase
-                .from('seismic_dc_user')
-                .select('*')
-                .eq('user_id', discordId)
-                .single();
+            const { user: matchedUser, username } = await communityApi.getDiscordProfile(session.access_token);
+            if (!matchedUser) {
+                setError(username
+                    ? `Welcome, ${username}! We couldn't find your stats yet. Data is synced periodically.`
+                    : "Welcome! We couldn't find your stats in our database yet.");
+                return;
+            }
 
-            if (error || !data) {
-                // Try fallback to username if ID lookup fails
-                const username = authUser.user_metadata.custom_claims?.global_name ||
-                    authUser.user_metadata.full_name ||
-                    authUser.user_metadata.name;
+            const authUsername = authUser.user_metadata.custom_claims?.global_name ||
+                authUser.user_metadata.full_name ||
+                authUser.user_metadata.name ||
+                username;
+            const isBanned = banList.some((bannedName: string) =>
+                bannedName.toLowerCase() === matchedUser.username.toLowerCase() ||
+                (authUsername && bannedName.toLowerCase() === authUsername.toLowerCase())
+            );
 
-                if (username) {
-                    const { data: nameData } = await supabase
-                        .from('seismic_dc_user')
-                        .select('*')
-                        .ilike('username', username)
-                        .eq('is_bot', false)
-                        .limit(1)
-                        .single();
-
-                    const matchedUser = nameData as unknown as SeismicUser | null;
-
-                    if (matchedUser) {
-                        const isBanned = banList.some((bannedName: string) =>
-                            bannedName.toLowerCase() === matchedUser.username.toLowerCase() ||
-                            bannedName.toLowerCase() === username.toLowerCase()
-                        );
-                        if (isBanned) {
-                            setError("Data not found or you don't have permission to view it.");
-                        } else {
-                            setDbUser(matchedUser);
-                        }
-                    } else {
-                        setError(`Welcome, ${username}! We couldn't find your stats yet. Data is synced periodically.`);
-                    }
-                } else {
-                    setError("Welcome! We couldn't find your stats in our database yet.");
-                }
+            if (isBanned) {
+                setError("Data not found or you don't have permission to view it.");
             } else {
-                const matchedUser = data as unknown as SeismicUser;
-                const authUsername = authUser.user_metadata.custom_claims?.global_name ||
-                    authUser.user_metadata.full_name ||
-                    authUser.user_metadata.name;
-
-                const isBanned = banList.some((bannedName: string) =>
-                    bannedName.toLowerCase() === matchedUser.username.toLowerCase() ||
-                    (authUsername && bannedName.toLowerCase() === authUsername.toLowerCase())
-                );
-
-                if (isBanned) {
-                    setError("Data not found or you don't have permission to view it.");
-                } else {
-                    setDbUser(matchedUser);
-                }
+                setDbUser(matchedUser);
             }
         } catch (err) {
             console.error('Error fetching user data:', err);

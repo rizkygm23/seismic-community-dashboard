@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import UserCard from './UserCard';
 import { SeismicUser } from '@/types/database_manual';
-import { supabase } from '@/lib/supabase';
+import { communityApi } from '@/lib/communityApi';
 
 // Helper type to allow partial user data input
 type PartialUser = Partial<SeismicUser> & { id: number | string; username: string };
@@ -43,17 +43,9 @@ export default function UserDetailModal({ user: initialUser, onClose }: UserDeta
         async function fetchUserData() {
             setLoading(true);
             try {
-                // If the input user seems to have most fields, use it directly (optional optimization)
-                // But generally safer to fetch fresh data to ensure all fields needed by UserCard exist
-                const { data, error } = await supabase
-                    .from('seismic_dc_user')
-                    .select('*')
-                    .eq('username', initialUser.username)
-                    .single();
-
-                if (error) throw error;
-                if (data) {
-                    setFullUser(data);
+                const { user } = await communityApi.getUserDetails(initialUser.username);
+                if (user) {
+                    setFullUser(user);
                 }
             } catch (error) {
                 console.error('Error fetching full user details:', error);

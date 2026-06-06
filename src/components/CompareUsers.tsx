@@ -1,10 +1,10 @@
 'use client';
 
 import { useState, useRef, useEffect, useMemo } from 'react';
-import { supabase } from '@/lib/supabase';
 import { SeismicUser } from '@/types/database_manual';
 import { getHighestMagnitudeRole, getRoleIconPath } from '@/lib/roleUtils';
 import BattleCardImage from './BattleCardImage';
+import { communityApi } from '@/lib/communityApi';
 
 interface CompareResult {
     user1: SeismicUser;
@@ -415,14 +415,8 @@ export default function CompareUsers() {
     const searchUser = async (q: string) => {
         if (q.length < 2) { setSearchResults([]); return; }
         try {
-            const { data, error } = await supabase
-                .from('seismic_dc_user').select('*')
-                .ilike('username', `%${q}%`)
-                .eq('is_bot', false)
-                .order('total_messages', { ascending: false })
-                .limit(6);
-            if (error) throw error;
-            setSearchResults((data as SeismicUser[]) || []);
+            const { users } = await communityApi.getCompareSearch(q);
+            setSearchResults(users);
         } catch { setSearchResults([]); }
     };
 
@@ -445,45 +439,9 @@ export default function CompareUsers() {
         setLoading(true);
 
         try {
-            // Get some random names for the shuffle animation
-            const { data: namesData } = await supabase
-                .from('seismic_dc_user').select('username, display_name')
-                .eq('is_bot', false)
-                .gt('total_messages', 5)
-                .neq('x_username', 'i')
-                .limit(100);
-
-            const names = ((namesData || []) as { username: string; display_name: string | null }[])
-                .filter(u => u.username !== selectedUser.username)
-                .map(u => u.display_name || u.username);
-
-            setShuffleNames(names.length > 0 ? names : ['???']);
-
-            // Get total count for random offset
-            const { count } = await supabase
-                .from('seismic_dc_user').select('id', { count: 'exact', head: true })
-                .eq('is_bot', false)
-                .gt('total_messages', 5)
-                .neq('user_id', selectedUser.user_id)
-                .neq('x_username', 'i');
-
-            if (!count || count === 0) throw new Error('No opponents');
-
-            // Pick a random user
-            const randomOffset = Math.floor(Math.random() * count);
-            const { data: randomData, error } = await supabase
-                .from('seismic_dc_user').select('*')
-                .eq('is_bot', false)
-                .gt('total_messages', 5)
-                .neq('user_id', selectedUser.user_id)
-                .neq('x_username', 'i')
-                .order('total_messages', { ascending: false })
-                .range(randomOffset, randomOffset);
-
-            if (error || !randomData || randomData.length === 0) throw new Error('No opponent found');
-
-            const opp = randomData[0] as SeismicUser;
-            setOpponent(opp);
+            const { names, opponent } = await communityApi.getCompareOpponent(selectedUser);
+            setShuffleNames(names);
+            setOpponent(opponent);
 
             // Start the reveal countdown
             setPhase('reveal');
@@ -514,20 +472,12 @@ export default function CompareUsers() {
         if (!selectedUser || !opponent) return;
         setLoading(true);
         try {
-            const [u1Total, u1Tweet, u1Art, u2Total, u2Tweet, u2Art, totalCount] = await Promise.all([
-                supabase.from('seismic_dc_user').select('id', { count: 'exact', head: true }).eq('is_bot', false).gt('total_messages', selectedUser.total_messages),
-                supabase.from('seismic_dc_user').select('id', { count: 'exact', head: true }).eq('is_bot', false).gt('tweet', selectedUser.tweet),
-                supabase.from('seismic_dc_user').select('id', { count: 'exact', head: true }).eq('is_bot', false).gt('art', selectedUser.art),
-                supabase.from('seismic_dc_user').select('id', { count: 'exact', head: true }).eq('is_bot', false).gt('total_messages', opponent.total_messages),
-                supabase.from('seismic_dc_user').select('id', { count: 'exact', head: true }).eq('is_bot', false).gt('tweet', opponent.tweet),
-                supabase.from('seismic_dc_user').select('id', { count: 'exact', head: true }).eq('is_bot', false).gt('art', opponent.art),
-                supabase.from('seismic_dc_user').select('id', { count: 'exact', head: true }).eq('is_bot', false),
-            ]);
+            const ranks = await communityApi.getCompareRanks(selectedUser, opponent);
             setCompareResult({
                 user1: selectedUser, user2: opponent,
-                user1Rank: { total: (u1Total.count || 0) + 1, tweet: (u1Tweet.count || 0) + 1, art: (u1Art.count || 0) + 1 },
-                user2Rank: { total: (u2Total.count || 0) + 1, tweet: (u2Tweet.count || 0) + 1, art: (u2Art.count || 0) + 1 },
-                totalUsers: totalCount.count || 1,
+                user1Rank: ranks.user1Rank,
+                user2Rank: ranks.user2Rank,
+                totalUsers: ranks.totalUsers,
             });
             setCurrentStep(0);
             setPhase('steps');

@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
 import { SeismicUser } from '@/types/database_manual';
+import { communityApi } from '@/lib/communityApi';
 
 export default function RecentActivity() {
     const [recentUsers, setRecentUsers] = useState<SeismicUser[]>([]);
@@ -12,17 +12,8 @@ export default function RecentActivity() {
         async function fetchRecentActivity() {
             setLoading(true);
             try {
-                // Get users with recent activity, ordered by last message date
-                const { data, error } = await supabase
-                    .from('seismic_dc_user')
-                    .select('*')
-                    .eq('is_bot', false)
-                    .not('last_message_date', 'is', null)
-                    .order('last_message_date', { ascending: false })
-                    .limit(20);
-
-                if (error) throw error;
-                setRecentUsers(data || []);
+                const { users } = await communityApi.getRecentActivity();
+                setRecentUsers(users);
             } catch (error) {
                 console.error('Recent activity fetch error:', error);
             } finally {

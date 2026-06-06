@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
 import { CommunityStats, RoleDistribution, RegionDistribution, SeismicStatsSnapshot } from '@/types/database_manual';
 import { getHighestRoleIcon, getRoleIconPath } from '@/lib/roleUtils';
 import EncryptedText from './EncryptedText';
 import { LoaderFive } from "@/components/ui/loader";
 import UserDetailModal from './UserDetailModal';
+import { communityApi } from '@/lib/communityApi';
 
 // Defines extended user info for top contributors
 interface TopContributor {
@@ -58,35 +58,7 @@ export default function StatsOverview() {
         async function fetchStats() {
             setLoading(true);
             try {
-                // Fetch latest snapshot and top contributors in parallel
-                const [snapshotResult, topResult, verifiedCount, leaderCount] = await Promise.all([
-                    supabase.from('seismic_stats_snapshot')
-                        .select('*')
-                        .order('created_at', { ascending: false })
-                        .limit(1)
-                        .single(),
-
-                    // Top 5 contributors (still live)
-                    supabase.from('seismic_dc_user')
-                        .select('id, username, display_name, avatar_url, roles, total_messages')
-                        .eq('is_bot', false)
-                        .order('total_messages', { ascending: false })
-                        .limit(5),
-
-                    // Direct count for Verified role (optional, could be moved to worker but quick enough)
-                    supabase.from('seismic_dc_user')
-                        .select('id', { count: 'exact', head: true })
-                        .eq('is_bot', false)
-                        .contains('roles', ['Verified']),
-
-                    supabase.from('seismic_dc_user')
-                        .select('id', { count: 'exact', head: true })
-                        .eq('is_bot', false)
-                        .contains('roles', ['Leader']),
-                ]);
-
-                // Supabase typings can be noisy here, so we cast to the known snapshot shape
-                const snapshotData = (snapshotResult as any)?.data as SeismicStatsSnapshot | null;
+                const { snapshot: snapshotData, topContributors } = await communityApi.getStatsOverview();
 
                 if (snapshotData) {
                     const snap = snapshotData;
@@ -134,18 +106,7 @@ export default function StatsOverview() {
                     console.warn("No stats snapshot found.");
                 }
 
-                if (topResult.data) {
-                    setTopContributors(topResult.data.map((r: any) => ({
-                        id: r.id,
-                        username: r.username,
-                        display_name: r.display_name,
-                        avatar_url: r.avatar_url,
-                        roles: r.roles,
-                        total: r.total_messages,
-                    })));
-                }
-
-
+                setTopContributors(topContributors);
 
             } catch (error) {
                 console.error('Stats fetch error:', error);

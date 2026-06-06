@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
 import { RoleDistribution, LeaderboardUser } from '@/types/database_manual';
 import { getHighestRoleIcon, getRoleIconPath } from '@/lib/roleUtils';
 import UserDetailModal from './UserDetailModal';
 import { LoaderFive } from "@/components/ui/loader";
+import { communityApi } from '@/lib/communityApi';
 
 export default function RoleExplorer() {
     const [roles, setRoles] = useState<RoleDistribution[]>([]);
@@ -17,120 +17,16 @@ export default function RoleExplorer() {
     const [roleCache, setRoleCache] = useState<Record<string, LeaderboardUser[]>>({});
 
     const fetchMembersForRole = useCallback(async (roleName: string) => {
-        const magnitudePattern = /^Magnitude (\d+\.?\d*)$/;
-        const isMagnitudeRole = magnitudePattern.test(roleName);
-        const selectedMagValue = isMagnitudeRole ? parseFloat(roleName.match(magnitudePattern)![1]) : 0;
-
-        let foundMembers: LeaderboardUser[] = [];
-        let offset = 0;
-        const batchSize = 1000;
-        const hardLimit = 15000;
-
-        while (foundMembers.length < 20) {
-            const { data, error } = await supabase
-                .from('seismic_dc_user')
-                .select('id, username, display_name, avatar_url, roles, tweet, art, total_messages, general_chat, magnitude_chat, devnet_chat, report_chat')
-                .eq('is_bot', false)
-                .contains('roles', [roleName])
-                .order('total_messages', { ascending: false })
-                .range(offset, offset + batchSize - 1);
-
-            if (error) throw error;
-            if (!data || data.length === 0) break;
-
-            let validBatch = data || [];
-
-            if (isMagnitudeRole) {
-                validBatch = validBatch.filter((user: any) => {
-                    const userRoles = user.roles || [];
-                    let highestMag = 0;
-                    userRoles.forEach((role: string) => {
-                        const match = role.match(magnitudePattern);
-                        if (match) {
-                            const magValue = parseFloat(match[1]);
-                            if (magValue > highestMag) highestMag = magValue;
-                        }
-                    });
-                    return highestMag === selectedMagValue;
-                });
-            }
-
-            foundMembers = [...foundMembers, ...validBatch];
-
-            if (foundMembers.length >= 20) break;
-            if (data.length < batchSize) break;
-
-            offset += batchSize;
-            if (offset >= hardLimit) break;
-        }
-
-        return foundMembers.slice(0, 20);
+        const { members } = await communityApi.getRoleMembers(roleName);
+        return members;
     }, []);
 
     useEffect(() => {
         async function fetchRoles() {
             setLoading(true);
             try {
-                const [verifiedCount, leaderCount] = await Promise.all([
-                    supabase.from('seismic_dc_user').select('id', { count: 'exact', head: true }).eq('is_bot', false).contains('roles', ['Verified']),
-                    supabase.from('seismic_dc_user').select('id', { count: 'exact', head: true }).eq('is_bot', false).contains('roles', ['Leader']),
-                ]);
-
-                const allRolesData: { roles: string[] | null }[] = [];
-                const batchSize = 1000;
-                let offset = 0;
-                let hasMore = true;
-
-                while (hasMore) {
-                    const { data: batch, error } = await supabase
-                        .from('seismic_dc_user')
-                        .select('roles')
-                        .eq('is_bot', false)
-                        .not('roles', 'is', null)
-                        .range(offset, offset + batchSize - 1);
-
-                    if (error) throw error;
-                    if (batch && batch.length > 0) {
-                        allRolesData.push(...batch);
-                        offset += batchSize;
-                        hasMore = batch.length === batchSize;
-                    } else {
-                        hasMore = false;
-                    }
-                }
-
-                const roleMap = new Map<string, number>();
-                const magnitudePattern = /^Magnitude (\d+\.?\d*)$/;
-
-                allRolesData.forEach((row) => {
-                    const userRoles = row.roles || [];
-                    let highestMagnitude: number | null = null;
-                    let highestMagnitudeRole: string | null = null;
-
-                    userRoles.forEach((role) => {
-                        const match = role.match(magnitudePattern);
-                        if (match) {
-                            const magValue = parseFloat(match[1]);
-                            if (highestMagnitude === null || magValue > highestMagnitude) {
-                                highestMagnitude = magValue;
-                                highestMagnitudeRole = role;
-                            }
-                        }
-                    });
-
-                    if (highestMagnitudeRole) {
-                        roleMap.set(highestMagnitudeRole, (roleMap.get(highestMagnitudeRole) || 0) + 1);
-                    }
-                });
-
-                if (verifiedCount.count && verifiedCount.count > 0) roleMap.set('Verified', verifiedCount.count);
-                if (leaderCount.count && leaderCount.count > 0) roleMap.set('Leader', leaderCount.count);
-
-                const sortedRoles = Array.from(roleMap.entries())
-                    .sort((a, b) => b[1] - a[1])
-                    .map(([role_name, user_count]) => ({ role_name, user_count }));
-
-                setRoles(sortedRoles);
+                const { roles } = await communityApi.getRoles();
+                setRoles(roles);
             } catch (error) {
                 console.error('Role fetch error:', error);
             } finally {
